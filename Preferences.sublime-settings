@@ -1,0 +1,76 @@
+{
+	"meta.color_scheme": {
+		"widget": "select_resource",
+		"args": { "find_resources": "*.tmTheme" }
+	},
+
+	// "meta.font_options": {
+	//     "widget": ""
+	// }
+
+	"meta.word_wrap": {
+		"widget": "select",
+		"args": {"values": [ true, false, "auto" ]}
+	},
+
+	// meta.dictionary may be set to one of *.dic found
+
+	"meta.dictionary": {
+		"widget": "select_resource",
+		"args": { "find_resources": "*.dic" },
+		"validate": "str"
+	},
+
+	"meta.caret_style": {
+		"widget": "select",
+		"args": { "values": ["smooth", "phase", "blink", "solid"] },
+		"validate": "str"
+	},
+
+	"meta.draw_white_space": {
+		"widget": "select",
+		"args": { "values": ["none", "selection", "all"] },
+		"validate": "str"
+	},
+
+	// indent_guide_options is flags
+	"meta.default_line_endings": {
+		"widget": "select",
+		"args": { "values": [ 
+			{"caption": "System", "value": "system"}, 
+			{"caption": "Windows (CRLF)", "value": "windows"}, 
+			{"caption": "UNIX (LF)", "value": "unix"}
+		]},
+		"validate": "str"
+	},
+
+	"meta.theme": {
+		"widget": "select_resource",
+		"args": { "find_resources": "*.sublime-theme" }
+	},
+
+	"meta.gpu_window_buffer": {
+		"widget": "select",
+		"args": {"values": [ true, false, "auto" ]},
+		"validate": [ true, false, "auto" ]
+	},
+
+	"meta.overlay_scroll_bars": {
+		"widget": "select",
+		"args": { "values": ["system", "enabled", "disabled"] },
+		"validate": "str"
+	},
+
+	"meta.ignored_packages": {
+		"widget": "select",
+		"args": { "values": [ 
+			{"caption": "Enable Package", "command": "enable_package"},
+			{"caption": "Disable Package", "command": "disable_package"}
+		]}
+	},
+
+	// Shall there be a dialog asking for resetting to default, if the
+	// value has been changed from user.
+	"pref_edit_dialog_reset_to_default": true
+
+}
