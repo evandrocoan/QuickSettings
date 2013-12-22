@@ -1,7 +1,7 @@
 Preferences Editor
 ==================
 
-This is a editor, which allows you to browse and edit sublime preferences, 
+This is a editor, which allows you to browse and edit sublime preferences/settings, 
 without writing JSON files (at least in most cases).
 
 In browser you see a list of preferences in form::
