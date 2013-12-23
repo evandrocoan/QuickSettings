@@ -47,6 +47,13 @@ def get_descriptions(data):
 
 	"""
 	COMMENT_RE = re.compile(r"(?s)\s*//\s?(.*)")
+	COMMENT_RE2 = re.compile(r'''(?xs)
+		(?:
+			"(?:[^"\\]|\\.)*"
+			| (?:(?!//)[^"])
+		)+
+		(//.*)
+        ''')
 	KEY_RE     = re.compile(r'\s*"([^"]+)"\s*:')
 	d = {}
 	comment = ""
@@ -59,6 +66,13 @@ def get_descriptions(data):
 			comment += s
 			lines.append("\n")
 			continue
+
+		m = COMMENT_RE2.match(line)
+		if m:
+			sys.stderr.write("line1: %s\n" % (repr(line)))
+			line = line[:m.start(1)].rstrip()+"\n"
+			sys.stderr.write("line2: %s\n" % (repr(line)))
+
 
 		if not line.strip(): # empty line resets current comment
 			comment = ""
@@ -118,11 +132,11 @@ def load_preferences():
 		if platform != "any":
 			type = type+"_"+platform
 
-		if name not in syntax_names and name not in prefs:
+		if name not in prefs:
 			prefs[name] = {}
 
 		syntax = None
-		if name in syntax_names:
+		if 0 and name in syntax_names:
 			type = "syntax_"+type
 			syntax = name
 			name = "Preferences"
@@ -452,7 +466,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 	def get_pref_keys(self, name):
 		pref = self.preferences[name]
 
-		#if name == "Python":
+		#if name == "PlainTasks":
 			#import spdb ; spdb.start()
 
 		pref_default = {'default': {}, 'default_'+sublime.platform(): {}}
@@ -598,6 +612,8 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 		self.platform = sublime.platform()
 		self.preferences = load_preferences()
 
+		#import spdb ; spdb.start()
+
 		settings = self.window.active_view().settings()
 		if settings.has('syntax'):
 			current_syntax = settings.get('syntax')
@@ -631,6 +647,8 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 		option_data = []
 		options = []
 		for name,prefs in sorted(self.preferences.items()):
+			if name in syntax_names and name != current_syntax: continue
+
 			for key in self.get_pref_keys(name):
 				key_path, key_value = self.get_pref_rec(name, key)
 				options.append( [ key_path, json.dumps(key_value.get('value')) ] )
