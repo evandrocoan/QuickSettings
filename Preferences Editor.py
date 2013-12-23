@@ -1,7 +1,7 @@
 import sublime, os, sublime_plugin, re, json, sys
 
-def show_panel(view, options, done):
-	sublime.set_timeout(lambda: view.window().show_quick_panel(options, done, 0), 10)
+def show_panel(view, options, done, highlighted=None):
+	sublime.set_timeout(lambda: view.window().show_quick_panel(options, done, 0, -1, highlighted), 10)
 
 def json_list(x):
 	try:
@@ -46,7 +46,7 @@ def get_descriptions(data):
 	    string containing json preferences file.
 
 	"""
-	COMMENT_RE = re.compile(r"\s*//\s?(.*)")
+	COMMENT_RE = re.compile(r"(?s)\s*//\s?(.*)")
 	KEY_RE     = re.compile(r'\s*"([^"]+)"\s*:')
 	d = {}
 	comment = ""
@@ -66,7 +66,7 @@ def get_descriptions(data):
 
 		m = KEY_RE.match(line)
 		if m:
-			d[m.group(1)] = {"description": comment}
+			d[m.group(1)] = {"description": comment.replace("\r", "") or "No help available :("}
 			comment = ""
 
 		lines.append(line)
@@ -149,7 +149,7 @@ def load_preferences():
 			for k,v in data.items():
 				#if k.startswith('meta.'):
 					#import spdb ; spdb.start()
-				if k not in d: d[k] = {"description": ""}
+				if k not in d: d[k] = {"description": "No help available :("}
 				d[k]['value'] = v
 
 		except:
@@ -193,7 +193,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 		# 		true_string += ", default"
 		# 	true_string += ")"
 
-		options = ["True", "False"]
+		options = ["true", "false"]
 
 		name, type, key = key_path.split('/')
 
@@ -204,7 +204,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 		def done(index):
 			view.erase_status("preferences_editor")
 
-			if index < 0: return
+			if index < 0: return self.shutdown()
 			if index == 0:
 				pref_editor.set_pref_value(key_path, True, default)
 			else:
@@ -230,7 +230,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 		def done(index):
 			view.erase_status("preferences_editor")
 
-			if index < 0: return
+			if index < 0: return self.shutdown()
 
 			# if command is set, let the command handle this preference
 			if commands[index]:
@@ -246,13 +246,71 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 		view.set_status("preferences_editor", "Set %s" % key_path)
 		show_panel(view, options, done)
 
+	def widget_multiselect(self, pref_editor, key_path, value=None, default=None, validate=None, values=None):
+		view = pref_editor.window.active_view()
+
+		if isinstance(values[0], str):
+			values = [ dict(caption=v, value=v) for v in values ]
+
+		other = []
+
+		def do_add_option():
+			options = [ v.get('caption', str(v.get('value')))
+				for v in values if v['value'] not in value ]
+
+			def done(index):
+				if index < 0: return self.shutdown()
+				value.append(other[index])
+				do_show_panel()
+
+			show_panel(view, options, done)
+
+		def do_remove_option():
+			options = [ v.get('caption', str(v.get('value')))
+				for v in values if v['value'] in value ]
+
+			def done(index):
+				if index < 0: return self.shutdown()
+				value.remove(value[index])
+				do_show_panel()
+
+			show_panel(view, options, done)
+
+
+		def do_show_panel():
+			other[:] = [ v['value'] for v in values if v['value'] not in value ]
+
+			options = [ 
+				["Set Value", json.dumps(value)], 
+				["Add Option", "From: "+json.dumps(other)], 
+				["Remove Option", "From:"+json.dumps(value)] 
+				]
+
+			def done(index):
+				view.erase_status("preferences_editor")
+				if index < 0: return self.shutdown()
+
+				if index == 0:
+					pref_editor.set_pref_value(key_path, value, default)
+
+				if index == 1:
+					do_add_option()
+
+				if index == 2:
+					do_remove_option()
+
+			view.set_status("preferences_editor", "Set %s" % key_path)
+			show_panel(view, options, done)
+
+		do_show_panel()
+
 	def widget_select_resource(self, pref_editor, key_path, value=None, default=None, validate=None, find_resources=""):
 		options = sublime.find_resources(find_resources)
 
 		view = pref_editor.window.active_view()
 		def done(index):
 			view.erase_status("preferences_editor")
-			if index < 0: return
+			if index < 0: return self.shutdown()
 			pref_editor.set_pref_value(key_path, options[index], default)
 
 		view.set_status("preferences_editor", "Set %s" % key_path)
@@ -296,6 +354,11 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 				settings.erase(key)
 			else:
 				settings.set(key, value)
+		else:
+			settings.set(key, value)
+
+		sublime.save_settings(name+'.sublime-settings')
+		self.shutdown()
 
 
 		#settings = sublime.load_settings(name+'.sublime-settings')
@@ -313,7 +376,6 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         # settings.set('ignored_packages', ignored)
         # sublime.save_settings(preferences_filename())
 
-		sublime.save_settings(name+'.sublime-settings')
 
 
 	def get_pref_rec(self, name, key):
@@ -369,7 +431,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 			if key in pref[type]:
 				return "%s/%s/%s" % (name, "Default", key), pref[type][key]
 
-		return "%s/%s" % (name, key), {'value': None, 'description': ''}
+		return "%s/%s" % (name, key), {'value': None, 'description': 'No help available :('}
 
 
 	def get_pref_defaults(self, name):
@@ -512,6 +574,9 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 		else:
 			show_panel(self.window.active_view(), options, done)
 
+	def shutdown(self):
+		self.window.run_command("hide_panel", {"panel": "output.preferences_editor_help"})
+
 	def run(self, name="Preferences", platform=None, syntax=None):
 		r"""
 		:param syntax:
@@ -542,15 +607,43 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 		#import spdb ; spdb.start()
 
+		option_data = []
 		options = []
 		for name,prefs in sorted(self.preferences.items()):
 			for key in self.get_pref_keys(name):
 				key_path, key_value = self.get_pref_rec(name, key)
 				options.append( [ key_path, json.dumps(key_value.get('value')) ] )
+				option_data.append( self.get_spec(name, key) )
+
+		#import spdb ; spdb.start()
+
+		help_view = self.window.create_output_panel("preferences_editor_help")
+
+		self.window.run_command("show_panel", {"panel": "output.preferences_editor_help"})
+
+		def on_highlighted(index):
+			help_view.run_command("select_all")
+			help_view.run_command("insert", {"characters": option_data[index]['description']})
+
+           # preview = self.window.create_output_panel("unicode_preview")
+
+           #  settings = sublime.load_settings('Character Table.sublime-settings')
+           #  font_size = settings.get('font_size', 72)
+
+           #  preview.settings().set("font_size", font_size)
+           #  self.window.run_command("show_panel", {"panel": "output.unicode_preview"})
+
+           #  def on_highlighted(index):
+           #      char = UNICODE_DATA[index][0]
+           #      preview.run_command("select_all")
+           #      preview.run_command("insert", {"characters": char})
+
+           #  self.window.show_quick_panel(UNICODE_DATA, on_done, 
+           #      sublime.MONOSPACE_FONT, -1, on_highlighted)	
 
 		def done(index):
-			if index < 0: return
+			if index < 0: return self.shutdown()
 
 			self.change_value(options[index][0])
 
-		show_panel(self.window.active_view(), options, done)
+		show_panel(self.window.active_view(), options, done, on_highlighted)
