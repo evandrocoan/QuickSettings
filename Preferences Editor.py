@@ -601,8 +601,21 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 		language_files = sublime.find_resources("*.tmLanguage")
 		syntax_names = []
+		
+		reStructuredText_syntax = None
+		plaintext_syntax = None
+
 		for f in language_files:
+			if "restructuredtext" in f.lower():
+				reStructuredText_syntax = f
+			if "plain text" in f.lower():
+				plaintext_syntax = f
+
 			syntax_names.append(os.path.basename(f).rsplit('.', 1)[0])
+
+		sys.stderr.write("plain text syntax: %s\n" % plaintext_syntax)
+		sys.stderr.write("reST syntax: %s\n" % reStructuredText_syntax)
+
 		self.syntax_names = syntax_names
 
 		#import spdb ; spdb.start()
@@ -623,7 +636,18 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 		def on_highlighted(index):
 			help_view.run_command("select_all")
-			help_view.run_command("insert", {"characters": option_data[index]['description']})
+			description = option_data[index]['description']
+			if description.startswith("=\n"):
+				description = description[2:]
+				if reStructuredText_syntax:
+					if help_view.settings().get('syntax') != reStructuredText_syntax:
+						help_view.set_syntax_file(reStructuredText_syntax)
+			else:
+				if plaintext_syntax:
+					if help_view.settings().get('syntax') != plaintext_syntax:
+						help_view.set_syntax_file(plaintext_syntax)
+
+			help_view.run_command("insert", {"characters": description})
 
            # preview = self.window.create_output_panel("unicode_preview")
 
