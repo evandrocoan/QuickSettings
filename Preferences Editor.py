@@ -304,14 +304,22 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 		do_show_panel()
 
-	def widget_select_resource(self, pref_editor, key_path, value=None, default=None, validate=None, find_resources=""):
-		options = sublime.find_resources(find_resources)
+	def widget_select_resource(self, pref_editor, key_path, value=None, default=None, validate=None, find_resources="", strip_path=True, strip_suffix=True):
+		resources = sublime.find_resources(find_resources)
+
+		options = resources
+
+		if strip_path:
+			options = [ os.path.basename(r) for r in options ]
+
+		if strip_suffix:
+			options = [ os.path.splitext(r)[0] for r in options ]
 
 		view = pref_editor.window.active_view()
 		def done(index):
 			view.erase_status("preferences_editor")
 			if index < 0: return self.shutdown()
-			pref_editor.set_pref_value(key_path, options[index], default)
+			pref_editor.set_pref_value(key_path, resources[index], default)
 
 		view.set_status("preferences_editor", "Set %s" % key_path)
 		show_panel(view, options, done)
