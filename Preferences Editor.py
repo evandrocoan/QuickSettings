@@ -3,6 +3,24 @@ import sublime, os, sublime_plugin, re, json, sys
 def show_panel(view, options, done):
 	sublime.set_timeout(lambda: view.window().show_quick_panel(options, done, 0), 10)
 
+def json_list(x):
+	try:
+		d = json.loads(x)
+	except Exception as e:
+		raise ValueError(str(e))
+
+	if not isinstance(d, list):
+		raise ValueError("Expected a JSON list")
+
+def json_dict(x):
+	try:
+		d = json.loads(x)
+	except Exception as e:
+		raise ValueError(str(e))
+
+	if not isinstance(d, dict):
+		raise ValueError("Expected a JSON dictionary")
+
 
 def show_input(view, caption, initial, on_done=None, on_change=None, 
 	on_cancel=None, on_load=None):
