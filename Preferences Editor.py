@@ -230,6 +230,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 	def widget_select(self, pref_editor, key_path, value=None, default=None, validate=None, values=[]):
 
+		commands = None
 		if isinstance(values[0], dict):
 			options = [ x['caption'] for x in values ]
 			commands = [ x.get('command') for x in values ]
@@ -247,13 +248,14 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 			if index < 0: return self.shutdown()
 
 			# if command is set, let the command handle this preference
-			if commands[index]:
-				context = view
-				if types[index] == "window":
-					context = view.window()
+			if commands:
+				if commands[index]:
+					context = view
+					if types[index] == "window":
+						context = view.window()
 
-				sublime.set_timeout(lambda: context.run_command(commands[index], args[index]), 10)
-				return
+					sublime.set_timeout(lambda: context.run_command(commands[index], args[index]), 10)
+					return
 
 			pref_editor.set_pref_value(key_path, values[index], default)
 
