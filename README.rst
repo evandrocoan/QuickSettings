@@ -39,7 +39,12 @@ Command Palette
 Changes
 -------
 
-2013-12-26 22:55
+2013-12-26 23:37 CET
+    - Added instant preview in current view.  This is cool for e.g. changing
+      color schemes.  Text Input for some reason does not update view (changing
+      font_size should also be seen at instance, but is not).
+
+2013-12-26 22:55 CET
     - **Preferences → Edit Settings...** now presents a list of preferences,
       which are editable.  Here you can edit preferences for different points 
       of view.
@@ -49,7 +54,7 @@ Changes
       dynamically set by packages.
 
 
-2013-12-25 16:28
+2013-12-25 16:28 CET
     - Default for naming current syntax is now "Current Syntax", you can turn
       on the real syntax name by setting ``preferences_editor_use_syntax_name``
       to ``true``.

@@ -26,6 +26,7 @@
             },
             { "caption": "-" },
             { "caption": "Edit Settings...","command": "edit_selected_preferences" }
+            
         ]
     }
 ]

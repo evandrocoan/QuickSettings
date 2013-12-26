@@ -235,7 +235,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 	#def bool_widget(self, ):
 
-	def widget_select_bool(self, pref_editor, key_path, value=None, default=None, validate=None):
+	def widget_select_bool(self, pref_editor, key_path, value=None, default=None, validate=None, preview=True):
 		# true_string = "True"
 
 		# true_flags = []
@@ -259,17 +259,35 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 		def done(index):
 			view.erase_status("preferences_editor")
 
-			if index < 0: return self.shutdown()
+			if index < 0:
+				self.view.settings().set(key, key_value['value'])
+				return self.shutdown()
+
 			if index == 0:
 				pref_editor.set_pref_value(key_path, True, default)
 			else:
 				pref_editor.set_pref_value(key_path, False, default)
 
+		def highlight(index):
+			if index == 0:
+				self.view.settings().set(key, True)
+			else:
+				self.view.settings().set(key, False)
+
 		view.set_status("preferences_editor", "Set %s" % key_path)
-		show_panel(view, options, done)
+		show_panel(view, options, done, highlight)
 
 
 	def widget_select(self, pref_editor, key_path, value=None, default=None, validate=None, values=[]):
+		settings = self.view.settings()
+
+		name, type, key = self.split_key_path(key_path)
+		key_value = pref_editor.get_pref_rec(name, key)[1]
+		view_specific = settings.get(key) != key_value['value']
+
+		CURRENT = None
+		if settings.has(key):
+			CURRENT = settings.get(key)
 
 		commands = None
 		if isinstance(values[0], dict):
@@ -286,7 +304,13 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 		def done(index):
 			view.erase_status("preferences_editor")
 
-			if index < 0: return self.shutdown()
+			if view_specific:
+				self.view.settings().set(key, CURRENT)
+			else:
+				self.view.settings().erase(key)
+
+			if index < 0:
+				return self.shutdown()
 
 			# if command is set, let the command handle this preference
 			if commands:
@@ -300,8 +324,12 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 			pref_editor.set_pref_value(key_path, values[index], default)
 
+		def highlight(index):
+			sys.stderr.write("setting %s to %s\n" % key, values[index])
+			settings.set(key, values[index])
+
 		view.set_status("preferences_editor", "Set %s" % key_path)
-		show_panel(view, options, done)
+		show_panel(view, options, done, highlight)
 
 	def widget_multiselect(self, pref_editor, key_path, value=None, default=None, validate=None, values=None):
 		view = pref_editor.window.active_view()
@@ -364,6 +392,16 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 	def widget_select_resource(self, pref_editor, key_path, value=None, default=None, validate=None, find_resources="", strip_path=True, strip_suffix=True):
 		resources = sublime.find_resources(find_resources)
 
+		name, type, key = self.split_key_path(key_path)
+
+		settings = self.view.settings()
+		key_value = pref_editor.get_pref_rec(name, key)[1]
+		view_specific = settings.get(key) != key_value['value']
+
+		CURRENT = None
+		if settings.has(key):
+			CURRENT = settings.get(key)
+
 		options = resources
 
 		if strip_path:
@@ -375,11 +413,21 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 		view = pref_editor.window.active_view()
 		def done(index):
 			view.erase_status("preferences_editor")
+
+			if view_specific:
+				settings.set(key, CURRENT)
+			else:
+				settings.erase(key)
+
 			if index < 0: return self.shutdown()
 			pref_editor.set_pref_value(key_path, resources[index], default)
 
+		def highlight(index):
+			sys.stderr.write("setting %s to %s\n" % (key, resources[index]))
+			settings.set(key, resources[index])
+
 		view.set_status("preferences_editor", "Set %s" % key_path)
-		show_panel(view, options, done)
+		show_panel(view, options, done, highlight)
 
 
 	def widget_input(self, pref_editor, key_path, value=None, default=None, validate=None):
@@ -388,7 +436,23 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 		view = pref_editor.window.active_view()
 		view.set_status("preferences_editor", "Set %s" % key_path)
 
+		settings = self.view.settings()
+		key_value = pref_editor.get_pref_rec(name, key)[1]
+		view_specific = settings.get(key) != key_value['value']
+
+		CURRENT = None
+		if settings.has(key):
+			CURRENT = settings.get(key)
+
+		def _undo_view_settings():
+			if view_specific:
+				settings.set(key, CURRENT)
+			else:
+				settings.erase(key)
+
 		def done(value):
+			_undo_view_settings()
+
 			try:
 				value = validate(value)
 				pref_editor.set_pref_value(key_path, value, default)
@@ -398,15 +462,19 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 		def change(value):
 			try:
-				validate(value)
+				v = validate(value)
+				settings.set(key, value)
+				sys.stderr.write("set %s to %s\n" % (key, value))
+
 			except ValueError as e:
 				sublime.status_message("Invalid Value: %s" % e)
 
 		def cancel():
+			_undo_view_settings()
 			view.erase_status("preferences_editor")
 
 		view.set_status("preferences_editor", "Set %s" % key_path)
-		show_input(self.window.active_view(), key, value, done, change)
+		show_input(self.window.active_view(), key, value, done, change, cancel)
 
 
 	def split_key_path(self, key_path):
