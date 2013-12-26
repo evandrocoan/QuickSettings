@@ -6,6 +6,8 @@ without writing JSON files (at least in most cases).
 
 Default setting's comment is displayed as help text, if present.
 
+There is an instant preview in current view which changing setting.
+
 
 Menu Items
 ----------
