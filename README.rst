@@ -39,10 +39,12 @@ Command Palette
 Changes
 -------
 
+2013-12-26 23:46 CET
+    - Fix instant preview for text input.
+
 2013-12-26 23:37 CET
     - Added instant preview in current view.  This is cool for e.g. changing
-      color schemes.  Text Input for some reason does not update view (changing
-      font_size should also be seen at instance, but is not).
+      color schemes.
 
 2013-12-26 22:55 CET
     - **Preferences → Edit Settings...** now presents a list of preferences,

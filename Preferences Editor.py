@@ -433,10 +433,10 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 	def widget_input(self, pref_editor, key_path, value=None, default=None, validate=None):
 		name, type, key = self.split_key_path(key_path)
 
-		view = pref_editor.window.active_view()
+		view = self.view
 		view.set_status("preferences_editor", "Set %s" % key_path)
 
-		settings = self.view.settings()
+		settings = view.settings()
 		key_value = pref_editor.get_pref_rec(name, key)[1]
 		view_specific = settings.get(key) != key_value['value']
 
@@ -463,8 +463,8 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 		def change(value):
 			try:
 				v = validate(value)
-				settings.set(key, value)
-				sys.stderr.write("set %s to %s\n" % (key, value))
+				view.settings().set(key, v)
+				sys.stderr.write("set %s to %s\n" % (key, v))
 
 			except ValueError as e:
 				sublime.status_message("Invalid Value: %s" % e)
@@ -474,7 +474,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 			view.erase_status("preferences_editor")
 
 		view.set_status("preferences_editor", "Set %s" % key_path)
-		show_input(self.window.active_view(), key, value, done, change, cancel)
+		show_input(self.view, key, value, done, change, cancel)
 
 
 	def split_key_path(self, key_path):
