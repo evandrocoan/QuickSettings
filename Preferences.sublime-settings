@@ -86,6 +86,15 @@
 
 	// Shall there be a dialog asking for resetting to default, if the
 	// value has been changed from user.
-	"pref_edit_dialog_reset_to_default": true
+	"preferences_editor_dialog_reset_to_default": true,
+
+	// Use syntax name instead of "Current Syntax" in preferences list.
+	"preferences_editor_use_syntax_name": false,
+
+	// Indicate user settings and default settings in preferences path.
+	// This adds "/Default/" or "/User/" in preferences path.
+	//
+	// This enables you to easily find your custom settings.
+	"preferences_editor_indicate_default_settings": false
 
 }

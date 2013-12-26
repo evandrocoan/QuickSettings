@@ -45,6 +45,9 @@ def get_descriptions(data):
 	:param data:
 	    string containing json preferences file.
 
+	This is only a rough parser and will fetch also keys from
+	sub-dictionaries.  Calling function is responsible to 
+	select correct data.
 	"""
 	COMMENT_RE = re.compile(r"(?s)\s*//\s?(.*)")
 	COMMENT_RE2 = re.compile(r'''(?xs)
@@ -55,6 +58,7 @@ def get_descriptions(data):
 		(//.*)
         ''')
 	KEY_RE     = re.compile(r'\s*"([^"]+)"\s*:')
+
 	d = {}
 	comment = ""
 	lines = []
@@ -96,6 +100,17 @@ def get_descriptions(data):
 #    Packages/User/<syntax>.sublime-settings
 #    <Buffer Specific Settings> 
 
+def get_current_syntax(view, syntax=None):
+	current_syntax = None
+
+	settings = view.settings()
+	if syntax:
+		current_syntax = syntax
+	elif settings.has('syntax'):
+		current_syntax = settings.get('syntax')
+		current_syntax = os.path.basename(current_syntax).rsplit('.', 1)[0]
+
+	return current_syntax
 
 def load_preferences():
 	# for syntax specific, we need syntax names
@@ -154,26 +169,52 @@ def load_preferences():
 
 		sys.stderr.write("name: %s, type: %s, syntax: %s\n" % (name, type, syntax))
 
-		d = {}
+		new_data = {}
 		data = sublime.load_resource(pref_file)
 		try:
 			#import spdb ; spdb.start()
 			d, data = get_descriptions(data)
 			data = json.loads(data)
 			for k,v in data.items():
-				#if k.startswith('meta.'):
-					#import spdb ; spdb.start()
-				if k not in d: d[k] = {"description": "No help available :("}
-				d[k]['value'] = v
+				if k not in d:
+					new_data[k] = {"description": "No help available :("}
+				else:
+					new_data[k] = d[k]
+
+				new_data[k]['value'] = v
 
 		except:
 			import traceback
 			sys.stderr.write(traceback.format_exc())
 			sys.stderr.write(data)
 
-		pref.update(d)
+		pref.update(new_data)
 
 	return prefs
+
+def load_syntax_names(get_specials=False):
+	language_files = sublime.find_resources("*.tmLanguage")
+
+	syntax_names = []
+	
+	reStructuredText_syntax = None
+	plaintext_syntax = None
+
+	for f in language_files:
+		if "restructuredtext" in f.lower():
+			reStructuredText_syntax = f
+		if "plain text" in f.lower():
+			plaintext_syntax = f
+
+		syntax_names.append(os.path.basename(f).rsplit('.', 1)[0])
+
+	sys.stderr.write("plain text syntax: %s\n" % plaintext_syntax)
+	sys.stderr.write("reST syntax: %s\n" % reStructuredText_syntax)
+
+	if get_specials:
+		return syntax_names, plaintext_syntax, reStructuredText_syntax
+
+	return syntax_names
 
 # commands are 
 #
@@ -209,7 +250,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 		options = ["true", "false"]
 
-		name, type, key = key_path.split('/')
+		name, type, key = self.split_key_path(key_path)
 
 		key_path, key_value = pref_editor.get_pref_rec(name, key)
 
@@ -342,7 +383,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 
 	def widget_input(self, pref_editor, key_path, value=None, default=None, validate=None):
-		name, type, key = key_path.split('/')
+		name, type, key = self.split_key_path(key_path)
 
 		view = pref_editor.window.active_view()
 		view.set_status("preferences_editor", "Set %s" % key_path)
@@ -368,8 +409,29 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 		show_input(self.window.active_view(), key, value, done, change)
 
 
+	def split_key_path(self, key_path):
+		name = self.name
+		type = "User"
+
+		if key_path.count('/') == 2:
+			name, type, key = key_path.split('/')
+		elif key_path.count('/') == 1:
+			name, key = key_path.split('/')
+		else:
+			key = key_path
+
+		return name, type, key
+
+
 	def set_pref_value(self, key_path, value, default=None):
-		name, type, key = key_path.split('/')
+		name, type, key = self.split_key_path(key_path)
+
+		if name == "This View":
+			settings = self.view.settings()
+			settings.set(key, value)
+			return
+
+		if name == "Current Syntax": name = self.current_syntax
 
 		settings = sublime.load_settings(name+'.sublime-settings')
 
@@ -401,34 +463,50 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         # sublime.save_settings(preferences_filename())
 
 
+	def make_pref_rec(self, name, type, key, value):
+		if self.settings_indicate_type and self.settings_indicate_name:
+			return "%s/%s/%s" % (name, type, key), value
+		elif self.settings_indicate_type:
+			return "%s/%s" % (name, type, key), value
+		elif self.settings_indicate_name:
+			return "%s/%s" % (name, key), value
+		else:
+			return key, value
+
 
 	def get_pref_rec(self, name, key):
 		platform = self.platform
+
+		if name == 'This View':
+			return self.make_pref_rec(name, "View", key, 
+				{'value': self.view.settings().get(key)})
 
 		pref = self.preferences[name]
 
 		type = "user_%s" % platform
 
+		indicate_type = self.view.settings().get('preferences_editor_indicate_default_settings')
+
 		if type in pref:
 			if key in pref[type]:
-				return "%s/%s/%s" % (name, "User", key), pref[type][key]
+				return self.make_pref_rec(name, "User", key, pref[type][key])
 
 		type = "user"
 
 		if type in pref:
 			if key in pref[type]:
-				return "%s/%s/%s" % (name, "User", key), pref[type][key]
+				return self.make_pref_rec(name, "User", key, pref[type][key])
 
 		type = "default_%s" % platform
 
 		if type in pref:
 			if key in pref[type]:
-				return "%s/%s/%s" % (name, "Default", key), pref[type][key]
+				return self.make_pref_rec(name, "Default", key, pref[type][key])
 
 		type = "default"
 		if type in pref:
 			if key in pref[type]:
-				return "%s/%s/%s" % (name, "Default", key), pref[type][key]
+				return self.make_pref_rec(name, "Default", key, pref[type][key])
 
 		pref = self.get_pref_defaults(name)
 
@@ -436,31 +514,34 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 		if type in pref:
 			if key in pref[type]:
-				return "%s/%s/%s" % (name, "Default", key), pref[type][key]
+				return self.make_pref_rec(name, "Default", key, pref[type][key])
 
 		type = "user"
 
 		if type in pref:
 			if key in pref[type]:
-				return "%s/%s/%s" % (name, "Default", key), pref[type][key]
+				return self.make_pref_rec(name, "Default", key, pref[type][key])
 
 		type = "default_%s" % platform
 
 		if type in pref:
 			if key in pref[type]:
-				return "%s/%s/%s" % (name, "Default", key), pref[type][key]
+				return self.make_pref_rec(name, "Default", key, pref[type][key])
 
 		type = "default"
 		if type in pref:
 			if key in pref[type]:
-				return "%s/%s/%s" % (name, "Default", key), pref[type][key]
+				return self.make_pref_rec(name, "Default", key, pref[type][key])
 
-		return "%s/%s" % (name, key), {'value': None, 'description': 'No help available :('}
+		if self.settings_indicate_name:
+			return "%s/%s" % (name, key), {'value': None, 'description': 'No help available :('}
+		else:
+			return key, {'value': None, 'description': 'No help available :('}
 
 
 	def get_pref_defaults(self, name):
 		pref_default = {'default': {}, 'default_'+sublime.platform(): {}}
-		if name in self.syntax_names or name == "Distraction Free":
+		if self.is_preferences(name):
 			pref_default = self.preferences['Preferences']
 
 		return pref_default
@@ -468,12 +549,10 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 	def get_pref_keys(self, name):
 		pref = self.preferences[name]
 
-		#if name == "PlainTasks":
-			#import spdb ; spdb.start()
-
 		pref_default = {'default': {}, 'default_'+sublime.platform(): {}}
-		if name in self.syntax_names or name == "Distraction Free":
+		if self.is_preferences(name):
 			pref_default = self.preferences['Preferences']
+
 
 		return set([x 
 			for y in ('default', 'default_'+sublime.platform())
@@ -483,6 +562,10 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 			for x in pref_default.get(y, {}).keys()
 			])
 
+	def is_preferences(self, name):
+		return name in self.syntax_names or name in (
+			"Distraction Free", "Current Syntax", "This View")
+
 	def get_spec(self, name, key):
 		pref = self.preferences[name]
 
@@ -490,7 +573,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 			if key in pref.get(k, {}):
 				return pref[k][key]
 
-		if name in self.syntax_names or name == "Distraction Free":
+		if self.is_preferences(name):
 			return self.get_spec('Preferences', key)
 
 		return None
@@ -527,7 +610,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 
 	def run_widget(self, key_path):
-		name, type, key = key_path.split('/')
+		name, type, key = self.split_key_path(key_path)
 
 		#import spdb ; spdb.start()
 
@@ -559,7 +642,8 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 			default=spec.get('value'), validate=validate, **args)
 
 	def change_value(self, key_path):
-		name, type, key = key_path.split('/')
+
+		name, type, key = self.split_key_path(key_path)
 
 		options = [
 			[ "Change Value", "" ],
@@ -582,7 +666,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 		view = self.window.active_view()
 
-		if view.settings().get('pref_edit_dialog_reset_to_default', False):
+		if view.settings().get('preferences_editor_dialog_reset_to_default', False):
 			if "/User/" in key_path:
 				options.append( [ "Reset to Default", str(spec.get('value')) ] )
 
@@ -601,7 +685,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 	def shutdown(self):
 		self.window.run_command("hide_panel", {"panel": "output.preferences_editor_help"})
 
-	def run(self, name="Preferences", platform=None, syntax=None):
+	def run(self, name=None, platform=None, syntax=None):
 		r"""
 		:param syntax:
 		    Name of syntax, you want to edit settings for
@@ -613,45 +697,49 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 		self.platform = sublime.platform()
 		self.preferences = load_preferences()
+		self.view = self.window.active_view()
 
-		#import spdb ; spdb.start()
+		self.settings_indicate_type = \
+			self.view.settings().get('preferences_editor_indicate_default_settings')
 
-		settings = self.window.active_view().settings()
-		if settings.has('syntax'):
-			current_syntax = settings.get('syntax')
-			current_syntax = os.path.basename(current_syntax).rsplit('.', 1)[0]
+		self.settings_indicate_name = True
 
-			if current_syntax not in self.preferences:
-				self.preferences[current_syntax] = {
+		syntax_names, plaintext_syntax, reStructuredText_syntax = load_syntax_names(True)
+		self.syntax_names = syntax_names
+		for n in syntax_names:
+			if n not in self.preferences:
+				self.preferences[n] = {
 					'default': {}, 'default_'+sublime.platform(): {} }
 
-		language_files = sublime.find_resources("*.tmLanguage")
-		syntax_names = []
-		
-		reStructuredText_syntax = None
-		plaintext_syntax = None
+		self.preferences['This View'] = {
+			'default': {}, 'default_'+sublime.platform(): {} }
 
-		for f in language_files:
-			if "restructuredtext" in f.lower():
-				reStructuredText_syntax = f
-			if "plain text" in f.lower():
-				plaintext_syntax = f
-
-			syntax_names.append(os.path.basename(f).rsplit('.', 1)[0])
-
-		sys.stderr.write("plain text syntax: %s\n" % plaintext_syntax)
-		sys.stderr.write("reST syntax: %s\n" % reStructuredText_syntax)
-
-		self.syntax_names = syntax_names
-
+		current_syntax = get_current_syntax(self.view, syntax)
+		self.current_syntax = current_syntax
+		self.preferences['Current Syntax'] = self.preferences[self.current_syntax]
+		self.name = name
 		#import spdb ; spdb.start()
 
 		option_data = []
 		options = []
-		for name,prefs in sorted(self.preferences.items()):
-			if name in syntax_names and name != current_syntax: continue
+		if name is None:
+			for name in sorted(self.preferences.keys()):
+				if name in syntax_names and name != current_syntax: continue
 
-			for key in self.get_pref_keys(name):
+				if self.view.settings().get('preferences_editor_use_syntax_name', False):
+					if name == "Current Syntax": continue
+				else:
+					if name == current_syntax: continue
+
+				for key in sorted(self.get_pref_keys(name)):
+					key_path, key_value = self.get_pref_rec(name, key)
+					options.append( [ key_path, json.dumps(key_value.get('value')) ] )
+					option_data.append( self.get_spec(name, key) )
+
+		else:
+			self.settings_indicate_name = False
+
+			for key in sorted(self.get_pref_keys(name)):
 				key_path, key_value = self.get_pref_rec(name, key)
 				options.append( [ key_path, json.dumps(key_value.get('value')) ] )
 				option_data.append( self.get_spec(name, key) )
@@ -676,6 +764,8 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 						help_view.set_syntax_file(plaintext_syntax)
 
 			help_view.run_command("insert", {"characters": description})
+			help_view.show(0)
+
 
            # preview = self.window.create_output_panel("unicode_preview")
 
@@ -698,4 +788,31 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 			self.change_value(options[index][0])
 
-		show_panel(self.window.active_view(), options, done, on_highlighted)
+		show_panel(self.view, options, done, on_highlighted)
+
+
+class EditSelectedPreferences(sublime_plugin.WindowCommand):
+	def run(self):
+		self.preferences  = load_preferences()
+		self.syntax_names = load_syntax_names()
+		current_syntax = get_current_syntax(self.window.active_view())
+
+		basic = [
+			["Preferences", "General Settings"], 
+			["Distraction Free", "Preferences for Distraction Free Mode"],
+			["Current Syntax", "%s-specific Preferences" % current_syntax],
+			["This View", "Preferences for this View only"]
+			]
+
+		options = basic + [ 
+			[k, k in self.syntax_names and "Syntax-specific Preferences" or "Package Settings"] 
+			for k in set(list(self.preferences.keys()) + self.syntax_names) 
+			if k not in basic and k not in set(["Distraction Free", "Preferences", "Current Syntax", "This View"])
+			]
+
+		def done(index):
+			self.window.run_command("edit_preferences", {"name": options[index][0]})
+
+		show_panel(self.window.active_view(), options, done)
+
+
