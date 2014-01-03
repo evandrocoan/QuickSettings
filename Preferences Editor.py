@@ -12,6 +12,8 @@ def json_list(x):
 	if not isinstance(d, list):
 		raise ValueError("Expected a JSON list")
 
+	return d
+
 def json_dict(x):
 	try:
 		d = json.loads(x)
@@ -20,6 +22,8 @@ def json_dict(x):
 
 	if not isinstance(d, dict):
 		raise ValueError("Expected a JSON dictionary")
+
+	return d
 
 
 def show_input(view, caption, initial, on_done=None, on_change=None, 
