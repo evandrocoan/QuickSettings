@@ -8,6 +8,8 @@ Default setting's comment is displayed as help text, if present.
 
 There is an instant preview in current view which changing setting.
 
+.. image:: http://quelltexter.org/_static/ChangeFontSize.gif
+
 
 Menu Items
 ----------

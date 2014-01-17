@@ -6,7 +6,10 @@ def show_panel(view, options, done, highlighted=None):
 def json_list(x):
 	try:
 		d = json.loads(x)
+		sys.stderr.write("d: %s\n" % d)
 	except Exception as e:
+		import traceback
+		sys.stderr.write(traceback.format_exc())
 		raise ValueError(str(e))
 
 	if not isinstance(d, list):
@@ -17,7 +20,10 @@ def json_list(x):
 def json_dict(x):
 	try:
 		d = json.loads(x)
+		sys.stderr.write("d: %s\n" % d)
 	except Exception as e:
+		import traceback
+		sys.stderr.write(traceback.format_exc())
 		raise ValueError(str(e))
 
 	if not isinstance(d, dict):
