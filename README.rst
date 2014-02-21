@@ -43,6 +43,10 @@ Command Palette
 Changes
 -------
 
+2013-02-21
+    - stay in preferences edit menu until quitting explicitly,
+      so you can edit more than one preference in a row.
+
 2013-01-03
     - Fix changing lists and dictionaries.  Changing lists resulted in a null
       list.

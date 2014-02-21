@@ -522,7 +522,8 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 			settings.set(key, value)
 
 		sublime.save_settings(name+'.sublime-settings')
-		self.shutdown()
+
+		self.preferences_selector()
 
 
 		#settings = sublime.load_settings(name+'.sublime-settings')
@@ -861,12 +862,16 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
            #  self.window.show_quick_panel(UNICODE_DATA, on_done, 
            #      sublime.MONOSPACE_FONT, -1, on_highlighted)	
 
+		options.insert( 0, [ "QUIT (Esc)", "End Edit Settings" ])
+
 		def done(index):
 			if index < 0: return self.shutdown()
+			if index == 0: return self.shutdown()
 
 			self.change_value(options[index][0])
 
-		show_panel(self.view, options, done, on_highlighted)
+		self.preferences_selector = lambda: show_panel(self.view, options, done, on_highlighted)
+		self.preferences_selector()
 
 
 class EditSelectedPreferences(sublime_plugin.WindowCommand):
