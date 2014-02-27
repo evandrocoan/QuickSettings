@@ -863,6 +863,9 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
            #      sublime.MONOSPACE_FONT, -1, on_highlighted)	
 
 		options.insert( 0, [ "QUIT (Esc)", "End Edit Settings" ])
+		option_data.insert( 0, 
+			{"description": "You can press Esc, or select this option to end "
+							"editing settings.\n"})
 
 		def done(index):
 			if index < 0: return self.shutdown()
