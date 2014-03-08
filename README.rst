@@ -43,6 +43,10 @@ Command Palette
 Changes
 -------
 
+2013-03-08
+    - update setting in quickpanel, after changing it
+    - current preferences are now default for syntax specific settings
+
 2014-02-21
     - stay in preferences edit menu until quitting explicitly,
       so you can edit more than one preference in a row.

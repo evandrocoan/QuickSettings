@@ -509,7 +509,17 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 			settings.set(key, value)
 			return
 
-		if name == "Current Syntax": name = self.current_syntax
+		if name == "Current Syntax":
+			name = self.current_syntax
+
+		if name != "Preferences":
+			if sublime.find_resources('%s.tmLanguage' % name):
+				settings = sublime.load_settings('Preferences.sublime-settings')
+				default  = settings.get(key)
+
+			if sublime.find_resources('%s.hidden-tmLanguage' % name):
+				settings = sublime.load_settings('Preferences.sublime-settings')
+				default  = settings.get(key)
 
 		settings = sublime.load_settings(name+'.sublime-settings')
 
@@ -523,8 +533,10 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 		sublime.save_settings(name+'.sublime-settings')
 
-		self.preferences_selector()
+		###
+		self.options[self.index][1] = json.dumps(value)
 
+		self.preferences_selector()
 
 		#settings = sublime.load_settings(name+'.sublime-settings')
 		#settings.set()
@@ -720,7 +732,8 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 		widget_func(self, key_path, value=rec.get('value'), 
 			default=spec.get('value'), validate=validate, **args)
 
-	def change_value(self, key_path):
+	def change_value(self, options, index):
+		key_path = options[index][0]
 
 		name, type, key = self.split_key_path(key_path)
 
@@ -870,10 +883,11 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 		def done(index):
 			if index < 0: return self.shutdown()
 			if index == 0: return self.shutdown()
+			self.index = index
+			self.change_value(self.options, index)
 
-			self.change_value(options[index][0])
-
-		self.preferences_selector = lambda: show_panel(self.view, options, done, on_highlighted)
+		self.options = options
+		self.preferences_selector = lambda: show_panel(self.view, self.options, done, on_highlighted)
 		self.preferences_selector()
 
 
