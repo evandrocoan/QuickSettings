@@ -43,7 +43,11 @@ Command Palette
 Changes
 -------
 
-2013-03-08
+2014-04-28
+    - fix issue #2: Anaconda uses multiline comments, which were not
+      extracted
+
+2014-03-08
     - update setting in quickpanel, after changing it
     - current preferences are now default for syntax specific settings
 
