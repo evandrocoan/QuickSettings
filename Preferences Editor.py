@@ -8,7 +8,7 @@ def show_panel(view, options, done, highlighted=None):
 def json_list(x):
     try:
         d = sublime.decode_value(x)
-        sys.stderr.write("d: %s\n" % d)
+        #sys.stderr.write("d: %s\n" % d)
     except Exception as e:
         import traceback
         sys.stderr.write(traceback.format_exc())
@@ -22,7 +22,7 @@ def json_list(x):
 def json_dict(x):
     try:
         d = sublime.decode_value(x)
-        sys.stderr.write("d: %s\n" % d)
+        #sys.stderr.write("d: %s\n" % d)
     except Exception as e:
         import traceback
         sys.stderr.write(traceback.format_exc())
@@ -40,7 +40,9 @@ def show_input(view, caption, initial, on_done=None, on_change=None,
     window = view.window()
 
     def do_input():
-        input_view = window.show_input_panel(caption, str(initial), on_done=on_done, 
+        if not isinstance(initial, str):
+            initial = sublime.encode_value(initial)
+        input_view = window.show_input_panel(caption, initial, on_done=on_done, 
             on_change=on_change, on_cancel=on_cancel)
 
         if on_load:
@@ -104,9 +106,9 @@ def get_descriptions(data):
 
         m = COMMENT_RE2.match(line)
         if m:
-            sys.stderr.write("line1: %s\n" % (repr(line)))
+            #sys.stderr.write("line1: %s\n" % (repr(line)))
             line = line[:m.start(1)].rstrip()+"\n"
-            sys.stderr.write("line2: %s\n" % (repr(line)))
+            #sys.stderr.write("line2: %s\n" % (repr(line)))
 
         if not line.strip(): # empty line resets current comment
             comment = ""
@@ -203,14 +205,14 @@ def load_preferences():
 
             pref = prefs[name][type]
 
-        sys.stderr.write("name: %s, type: %s, syntax: %s\n" % (name, type, syntax))
+        #sys.stderr.write("name: %s, type: %s, syntax: %s\n" % (name, type, syntax))
 
         new_data = {}
         data = sublime.load_resource(pref_file)
         try:
             #import spdb ; spdb.start()
             d, data2 = get_descriptions(data)
-            sys.stderr.write("data: %s\n" % data)
+            #sys.stderr.write("data: %s\n" % data)
             data = sublime.decode_value(data)
             for k,v in data.items():
                 if k not in d:
@@ -245,8 +247,8 @@ def load_syntax_names(get_specials=False):
 
         syntax_names.append(os.path.basename(f).rsplit('.', 1)[0])
 
-    sys.stderr.write("plain text syntax: %s\n" % plaintext_syntax)
-    sys.stderr.write("reST syntax: %s\n" % reStructuredText_syntax)
+    #sys.stderr.write("plain text syntax: %s\n" % plaintext_syntax)
+    #sys.stderr.write("reST syntax: %s\n" % reStructuredText_syntax)
 
     if get_specials:
         return syntax_names, plaintext_syntax, reStructuredText_syntax
@@ -698,7 +700,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
     def get_meta(self, name, key, spec=None):
         meta = self.get_spec(name, "meta."+key)
-        sys.stderr.write("meta: %s\n" % meta)
+        #sys.stderr.write("meta: %s\n" % meta)
         if meta: return meta.get('value')
 
         val = spec.get('value')

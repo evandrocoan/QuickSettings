@@ -43,6 +43,9 @@ Command Palette
 Changes
 -------
 
+2014-05-07
+    - fix wrong stringification of data in input panel
+
 2014-04-28
     - fix issue #2: Anaconda uses multiline comments, which were not
       extracted
