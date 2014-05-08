@@ -39,9 +39,14 @@ Command Palette
 **Edit Preferences: Edit Settings — Current Syntax**
     Shortcut to edit Preferences for Current Syntax
 
+**Edit Preferences: Edit Settings — Current Project**
+    Shortcut to edit Preferences for Current Project
 
 Changes
 -------
+
+2014-05-09
+    - add support for current project settings
 
 2014-05-07
     - fix wrong stringification of data in input panel

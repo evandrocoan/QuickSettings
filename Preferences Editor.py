@@ -214,6 +214,7 @@ def load_preferences():
             d, data2 = get_descriptions(data)
             #sys.stderr.write("data: %s\n" % data)
             data = sublime.decode_value(data)
+
             for k,v in data.items():
                 if k not in d:
                     new_data[k] = {"description": "No help available :("}
@@ -538,6 +539,20 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             settings.set(key, value)
             return
 
+        if name == "Current Project":
+            data = self.view.window().project_data()
+            if 'settings' not in data:
+                data['settings'] = {}
+
+            data['settings'][key] = value
+            if value == default:
+                if type != 'Default':
+                    if key in data['settings']:
+                        del data['settings'][key]
+
+            self.view.window().set_project_data(data)
+            return
+
         if name == "Current Syntax":
             name = self.current_syntax
 
@@ -617,6 +632,13 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             if key in pref[type]:
                 return self.make_pref_rec(name, "User", key, pref[type][key])
 
+        if name == 'Current Project':
+            data = self.view.window().project_data()
+            settings = data.get('settings', {})
+            if key in settings:
+                return self.make_pref_rec(name, "Project", key, 
+                    {'value': settings[key]})
+
         type = "default_%s" % platform
 
         if type in pref:
@@ -630,17 +652,19 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
         pref = self.get_pref_defaults(name)
 
-        type = "user_%s" % platform
+        if name != 'Current Project':
 
-        if type in pref:
-            if key in pref[type]:
-                return self.make_pref_rec(name, "Default", key, pref[type][key])
+            type = "user_%s" % platform
 
-        type = "user"
+            if type in pref:
+                if key in pref[type]:
+                    return self.make_pref_rec(name, "Default", key, pref[type][key])
 
-        if type in pref:
-            if key in pref[type]:
-                return self.make_pref_rec(name, "Default", key, pref[type][key])
+            type = "user"
+
+            if type in pref:
+                if key in pref[type]:
+                    return self.make_pref_rec(name, "Default", key, pref[type][key])
 
         type = "default_%s" % platform
 
@@ -684,7 +708,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
     def is_preferences(self, name):
         return name in self.syntax_names or name in (
-            "Distraction Free", "Current Syntax", "This View")
+            "Distraction Free", "Current Syntax", "Current Project", "This View")
 
     def get_spec(self, name, key):
         pref = self.preferences[name]
@@ -832,6 +856,9 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                 self.preferences[n] = {
                     'default': {}, 'default_'+sublime.platform(): {} }
 
+        self.preferences['Current Project'] = {
+            'default': {}, 'default_'+sublime.platform(): {} }
+
         self.preferences['This View'] = {
             'default': {}, 'default_'+sublime.platform(): {} }
 
@@ -916,6 +943,9 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             self.index = index
             self.change_value(self.options, index)
 
+        import pprint
+        pprint.pprint(options)
+
         self.options = options
         self.preferences_selector = lambda: show_panel(self.view, self.options, done, on_highlighted)
         self.preferences_selector()
@@ -931,13 +961,15 @@ class EditSelectedPreferences(sublime_plugin.WindowCommand):
             ["Preferences", "General Settings"], 
             ["Distraction Free", "Preferences for Distraction Free Mode"],
             ["Current Syntax", "%s-specific Preferences" % current_syntax],
+            ["Current Project", "Project-specific Preferences"],
             ["This View", "Preferences for this View only"]
             ]
 
+        # TODO: fix this first line. it is strange
         options = basic + [ 
             [k, k in self.syntax_names and "Syntax-specific Preferences" or "Package Settings"] 
             for k in set(list(self.preferences.keys()) + self.syntax_names) 
-            if k not in basic and k not in set(["Distraction Free", "Preferences", "Current Syntax", "This View"])
+            if k not in basic and k not in set(["Distraction Free", "Preferences", "Current Syntax", "Current Project", "This View"])
             ]
 
         def done(index):

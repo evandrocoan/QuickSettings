@@ -13,6 +13,11 @@
 		"args": {"name": "Preferences"}
 	},
 	{
+		"caption": "Edit Preferences: Edit Settings — Current Project", 
+		"command": "edit_preferences",
+		"args": {"name": "Current Project"}
+	},
+	{
 		"caption": "Edit Preferences: Edit Settings — Distraction Free", 
 		"command": "edit_preferences", 
 		"args": {"name": "Distraction Free"}
