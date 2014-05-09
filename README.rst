@@ -47,6 +47,8 @@ Changes
 
 2014-05-09
     - add support for current project settings
+    - fix issue #3 and issue #4: coding error and choking on empty pref file
+    - added setting "preferences_editor_loglevel" to set log level (default ERROR)
 
 2014-05-07
     - fix wrong stringification of data in input panel

@@ -1,17 +1,17 @@
-import sublime, os, sublime_plugin, re, sys
+import sublime, os, sublime_plugin, re, sys, logging
 
+log = logging.getLogger('prefedit')
+log.setLevel(logging.ERROR)
 
 def show_panel(view, options, done, highlighted=None):
     sublime.set_timeout(lambda: view.window().show_quick_panel(options, done, 0, -1, highlighted), 10)
-
 
 def json_list(x):
     try:
         d = sublime.decode_value(x)
         #sys.stderr.write("d: %s\n" % d)
     except Exception as e:
-        import traceback
-        sys.stderr.write(traceback.format_exc())
+        log.error("cannot decode %s", repr(x), exc_info=1)
         raise ValueError(str(e))
 
     if not isinstance(d, list):
@@ -24,8 +24,7 @@ def json_dict(x):
         d = sublime.decode_value(x)
         #sys.stderr.write("d: %s\n" % d)
     except Exception as e:
-        import traceback
-        sys.stderr.write(traceback.format_exc())
+        log.error("cannot decode %s", repr(x), exc_info=1)
         raise ValueError(str(e))
 
     if not isinstance(d, dict):
@@ -40,9 +39,10 @@ def show_input(view, caption, initial, on_done=None, on_change=None,
     window = view.window()
 
     def do_input():
-        if not isinstance(initial, str):
-            initial = sublime.encode_value(initial)
-        input_view = window.show_input_panel(caption, initial, on_done=on_done, 
+        _initial = initial
+        if not isinstance(_initial, str):
+            _initial = sublime.encode_value(_initial)
+        input_view = window.show_input_panel(caption, _initial, on_done=on_done, 
             on_change=on_change, on_cancel=on_cancel)
 
         if on_load:
@@ -213,6 +213,7 @@ def load_preferences():
             #import spdb ; spdb.start()
             d, data2 = get_descriptions(data)
             #sys.stderr.write("data: %s\n" % data)
+
             data = sublime.decode_value(data)
 
             for k,v in data.items():
@@ -224,9 +225,7 @@ def load_preferences():
                 new_data[k]['value'] = v
 
         except:
-            import traceback
-            sys.stderr.write(traceback.format_exc())
-            sys.stderr.write("%s\n" % data)
+            log.warning("Error reading %s (data is %s)", pref_file, data, exc_info=1)
 
         pref.update(new_data)
 
@@ -365,7 +364,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             pref_editor.set_pref_value(key_path, values[index], default)
 
         def highlight(index):
-            sys.stderr.write("setting %s to %s\n" % key, values[index])
+            log.info("setting %s to %s", key, values[index])
             settings.set(key, values[index])
 
         view.set_status("preferences_editor", "Set %s" % key_path)
@@ -463,7 +462,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             pref_editor.set_pref_value(key_path, resources[index], default)
 
         def highlight(index):
-            sys.stderr.write("setting %s to %s\n" % (key, resources[index]))
+            log.info("setting %s to %s", key, resources[index])
             settings.set(key, resources[index])
 
         view.set_status("preferences_editor", "Set %s" % key_path)
@@ -504,7 +503,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             try:
                 v = validate(value)
                 view.settings().set(key, v)
-                sys.stderr.write("set %s to %s\n" % (key, v))
+                log.debug("set %s to %s", key, v)
 
             except ValueError as e:
                 sublime.status_message("Invalid Value: %s" % e)
@@ -844,6 +843,12 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         self.preferences = load_preferences()
         self.view = self.window.active_view()
 
+        loglevel = self.view.settings().get('preferences_editor_loglevel', 'ERROR')
+        try:
+            log.setLevel(getattr(logging, loglevel))
+        except:
+            log.setLevel(logging.ERROR)
+
         self.settings_indicate_type = \
             self.view.settings().get('preferences_editor_indicate_default_settings')
 
@@ -943,8 +948,8 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             self.index = index
             self.change_value(self.options, index)
 
-        import pprint
-        pprint.pprint(options)
+        #import pprint
+        #pprint.pprint(options)
 
         self.options = options
         self.preferences_selector = lambda: show_panel(self.view, self.options, done, on_highlighted)

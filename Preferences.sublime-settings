@@ -95,6 +95,15 @@
 	// This adds "/Default/" or "/User/" in preferences path.
 	//
 	// This enables you to easily find your custom settings.
-	"preferences_editor_indicate_default_settings": false
+	"preferences_editor_indicate_default_settings": false,
+
+	// Log level
+	"preferences_editor_loglevel": "ERROR",
+
+	"meta.preferences_editor_loglevel": {
+		"widget": "select",
+		"args": { "values": ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"] },
+		"validate": "str"
+	}
 
 }
