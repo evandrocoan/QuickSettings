@@ -1,0 +1,109 @@
+{
+	"meta.color_scheme": {
+		"widget": "select_resource",
+		"args": { "find_resources": "*.tmTheme" }
+	},
+
+	"meta.font_options": {
+		"widget": "multiselect",
+		"args": { "values": [
+			{ "caption": "No Bold", "value": "no_bold" }, 
+			{ "caption": "No Italic", "value": "no_italic" }, 
+			{ "caption": "No Antialias", "value": "no_antialias" }, 
+			{ "caption": "Gray Antialias", "value": "gray_antialias" },
+			{ "caption": "Subpixel Antialias", "value": "subpixel_antialias" }, 
+			{ "caption": "No Round (OS X only)", "value": "no_round" }, 
+			{ "caption": "GDI (Windows only)", "value": "gdi" }, 
+			{ "caption": "Direct Write (Windwos only)", "value": "directwrite" }
+			]
+		}
+	},
+
+	"meta.word_wrap": {
+		"widget": "select",
+		"args": {"values": [ true, false, "auto" ]}
+	},
+
+	// meta.dictionary may be set to one of *.dic found
+
+	"meta.dictionary": {
+		"widget": "select_resource",
+		"args": { "find_resources": "*.dic" },
+		"validate": "str"
+	},
+
+	"meta.caret_style": {
+		"widget": "select",
+		"args": { "values": ["smooth", "phase", "blink", "solid"] },
+		"validate": "str"
+	},
+
+	"meta.draw_white_space": {
+		"widget": "select",
+		"args": { "values": ["none", "selection", "all"] },
+		"validate": "str"
+	},
+
+	"meta.indent_guide_options": {
+		"widget": "multiselect",
+		"args": { "values": [ "draw_normal", "draw_active"] }
+	},
+
+	"meta.default_line_endings": {
+		"widget": "select",
+		"args": { "values": [ 
+			{"caption": "System", "value": "system"}, 
+			{"caption": "Windows (CRLF)", "value": "windows"}, 
+			{"caption": "UNIX (LF)", "value": "unix"}
+		]},
+		"validate": "str"
+	},
+
+	"meta.theme": {
+		"widget": "select_resource",
+		"args": { "find_resources": "*.sublime-theme" }
+	},
+
+	"meta.gpu_window_buffer": {
+		"widget": "select",
+		"args": {"values": [ true, false, "auto" ]},
+		"validate": [ true, false, "auto" ]
+	},
+
+	"meta.overlay_scroll_bars": {
+		"widget": "select",
+		"args": { "values": ["system", "enabled", "disabled"] },
+		"validate": "str"
+	},
+
+	"meta.ignored_packages": {
+		"widget": "select",
+		"args": { "values": [ 
+			{"caption": "Enable Package", "command": "enable_package"},
+			{"caption": "Disable Package", "command": "disable_package"}
+		]}
+	},
+
+	// Shall there be a dialog asking for resetting to default, if the
+	// value has been changed from user.
+	"preferences_editor_dialog_reset_to_default": true,
+
+	// Use syntax name instead of "Current Syntax" in preferences list.
+	"preferences_editor_use_syntax_name": false,
+
+	// Indicate user settings and default settings in preferences path.
+	// This adds "/Default/" or "/User/" in preferences path.
+	//
+	// This enables you to easily find your custom settings.
+	"preferences_editor_indicate_default_settings": false,
+
+	// Log level
+	"preferences_editor_loglevel": "ERROR",
+
+	"meta.preferences_editor_loglevel": {
+		"widget": "select",
+		"args": { "values": ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"] },
+		"validate": "str"
+	}
+
+}
