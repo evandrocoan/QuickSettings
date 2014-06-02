@@ -150,6 +150,49 @@ def get_current_syntax(view, syntax=None):
 
     return current_syntax
 
+def save_preference(view, name, key, value, type=None, default=None):
+
+    if name == "This View":
+        settings = view.settings()
+        settings.set(key, value)
+        return
+
+    if name == "Current Project":
+        data = view.window().project_data()
+        if 'settings' not in data:
+            data['settings'] = {}
+
+        data['settings'][key] = value
+        if value == default:
+            if type != 'Default':
+                if key in data['settings']:
+                    del data['settings'][key]
+
+        view.window().set_project_data(data)
+        return
+
+    if name != "Preferences":
+        if sublime.find_resources('%s.tmLanguage' % name):
+            settings = sublime.load_settings('Preferences.sublime-settings')
+            default  = settings.get(key)
+
+        if sublime.find_resources('%s.hidden-tmLanguage' % name):
+            settings = sublime.load_settings('Preferences.sublime-settings')
+            default  = settings.get(key)
+
+    settings = sublime.load_settings(name+'.sublime-settings')
+
+    if value == default:
+        if type != 'Default':
+            settings.erase(key)
+        else:
+            settings.set(key, value)
+    else:
+        settings.set(key, value)
+
+    sublime.save_settings(name+'.sublime-settings')
+
+
 def load_preferences():
     # for syntax specific, we need syntax names
     language_files = sublime.find_resources("*.tmLanguage")
@@ -533,50 +576,11 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
     def set_pref_value(self, key_path, value, default=None):
         name, type, key = self.split_key_path(key_path)
 
-        if name == "This View":
-            settings = self.view.settings()
-            settings.set(key, value)
-            return
-
-        if name == "Current Project":
-            data = self.view.window().project_data()
-            if 'settings' not in data:
-                data['settings'] = {}
-
-            data['settings'][key] = value
-            if value == default:
-                if type != 'Default':
-                    if key in data['settings']:
-                        del data['settings'][key]
-
-            self.view.window().set_project_data(data)
-            return
-
         if name == "Current Syntax":
             name = self.current_syntax
 
-        if name != "Preferences":
-            if sublime.find_resources('%s.tmLanguage' % name):
-                settings = sublime.load_settings('Preferences.sublime-settings')
-                default  = settings.get(key)
+        save_preference(self.view, name, key, value, default=default, type=type)
 
-            if sublime.find_resources('%s.hidden-tmLanguage' % name):
-                settings = sublime.load_settings('Preferences.sublime-settings')
-                default  = settings.get(key)
-
-        settings = sublime.load_settings(name+'.sublime-settings')
-
-        if value == default:
-            if type != 'Default':
-                settings.erase(key)
-            else:
-                settings.set(key, value)
-        else:
-            settings.set(key, value)
-
-        sublime.save_settings(name+'.sublime-settings')
-
-        ###
         self.options[self.index][1] = sublime.encode_value(value, False)
 
         self.preferences_selector()
