@@ -45,10 +45,13 @@ Command Palette
 Changes
 -------
 
+2014-06-02
+    - fix accidental setting view preferences to None (thanks to Rahul Ramadas)
+
 2014-05-09
     - add support for current project settings
     - fix issue #3 and issue #4: coding error and choking on empty pref file
-    - added setting "preferences_editor_loglevel" to set log level (default ERROR)
+    - add setting "preferences_editor_loglevel" to set log level (default ERROR)
 
 2014-05-07
     - fix wrong stringification of data in input panel
@@ -71,13 +74,13 @@ Changes
 
 2013-12-26
     - Fix instant preview for text input.
-    - Added instant preview in current view.  This is cool for e.g. changing
+    - Add instant preview in current view.  This is cool for e.g. changing
       color schemes.
     - **Preferences → Edit Settings...** now presents a list of preferences,
       which are editable.  Here you can edit preferences for different points 
       of view.
 
-    - Added **This View** to list of editable preferences, which changes 
+    - Add **This View** to list of editable preferences, which changes 
       preferences for current view.  It does not include settings, which are
       dynamically set by packages.
 
