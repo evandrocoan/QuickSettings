@@ -365,7 +365,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
         name, type, key = self.split_key_path(key_path)
         key_value = pref_editor.get_pref_rec(name, key)[1]
-        view_specific = settings.get(key) != key_value['value']
+        view_specific = settings.has(key) and settings.get(key) != key_value['value']
 
         CURRENT = None
         if settings.has(key):
@@ -478,7 +478,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
         settings = self.view.settings()
         key_value = pref_editor.get_pref_rec(name, key)[1]
-        view_specific = settings.get(key) != key_value['value']
+        view_specific = settings.has(key) and settings.get(key) != key_value['value']
 
         CURRENT = None
         if settings.has(key):
