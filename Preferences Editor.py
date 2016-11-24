@@ -33,7 +33,7 @@ def json_dict(x):
     return d
 
 
-def show_input(view, caption, initial, on_done=None, on_change=None, 
+def show_input(view, caption, initial, on_done=None, on_change=None,
     on_cancel=None, on_load=None):
 
     window = view.window()
@@ -42,7 +42,7 @@ def show_input(view, caption, initial, on_done=None, on_change=None,
         _initial = initial
         if not isinstance(_initial, str):
             _initial = sublime.encode_value(_initial)
-        input_view = window.show_input_panel(caption, _initial, on_done=on_done, 
+        input_view = window.show_input_panel(caption, _initial, on_done=on_done,
             on_change=on_change, on_cancel=on_cancel)
 
         if on_load:
@@ -60,7 +60,7 @@ def get_descriptions(data):
         string containing json preferences file.
 
     This is only a rough parser and will fetch also keys from
-    sub-dictionaries.  Calling function is responsible to 
+    sub-dictionaries.  Calling function is responsible to
     select correct data.
     """
     COMMENT_RE = re.compile(r"(?s)\s*//\s?(.*)")
@@ -136,7 +136,7 @@ def get_descriptions(data):
 #    <Project Settings>
 #    Packages/<syntax>/<syntax>.sublime-settings
 #    Packages/User/<syntax>.sublime-settings
-#    <Buffer Specific Settings> 
+#    <Buffer Specific Settings>
 
 def get_current_syntax(view, syntax=None):
     current_syntax = None
@@ -299,7 +299,7 @@ def load_syntax_names(get_specials=False):
 
     return syntax_names
 
-# commands are 
+# commands are
 #
 # Edit Preferences        --> User
 # Edit Syntax Preferences --> User
@@ -312,7 +312,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
     #      "value": [ "", [caption, value] ]
     #      "validate": "Package Name.module.function"
     #      "tip": "text"      in status bar
-    #      "help": "Packages/..." or "text"  
+    #      "help": "Packages/..." or "text"
     # }
     #
 
@@ -448,10 +448,10 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         def do_show_panel():
             other[:] = [ v['value'] for v in values if v['value'] not in value ]
 
-            options = [ 
-                ["Set Value", sublime.encode_value(value, False)], 
-                ["Add Option", "From: "+sublime.encode_value(other, False)], 
-                ["Remove Option", "From:"+sublime.encode_value(value, False)] 
+            options = [
+                ["Set Value", sublime.encode_value(value, False)],
+                ["Add Option", "From: "+sublime.encode_value(other, False)],
+                ["Remove Option", "From:"+sublime.encode_value(value, False)]
                 ]
 
             def done(index):
@@ -589,7 +589,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         #settings = sublime.load_settings(name+'.sublime-settings')
         #settings.set()
 
-#       
+        #
         # settings = sublime.load_settings(preferences_filename())
         # ignored = settings.get('ignored_packages')
         # if not ignored:
@@ -617,7 +617,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         platform = self.platform
 
         if name == 'This View':
-            return self.make_pref_rec(name, "View", key, 
+            return self.make_pref_rec(name, "View", key,
                 {'value': self.view.settings().get(key)})
 
         pref = self.preferences[name]
@@ -640,7 +640,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             data = self.view.window().project_data()
             settings = data.get('settings', {})
             if key in settings:
-                return self.make_pref_rec(name, "Project", key, 
+                return self.make_pref_rec(name, "Project", key,
                     {'value': settings[key]})
 
         type = "default_%s" % platform
@@ -702,9 +702,9 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             pref_default = self.preferences['Preferences']
 
 
-        return set([x 
+        return set([x
             for y in ('default', 'default_'+sublime.platform())
-            for x in pref.get(y, {}).keys() 
+            for x in pref.get(y, {}).keys()
             ] + [x
             for y in ('default', 'default_'+sublime.platform())
             for x in pref_default.get(y, {}).keys()
@@ -738,13 +738,13 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
         if isinstance(val, float):
             return {
-                'widget': 'input', 
+                'widget': 'input',
                 'validate': 'float',
             }
 
         if isinstance(val, int):
             return {
-                'widget': 'input', 
+                'widget': 'input',
                 'validate': 'int',
             }
 
@@ -786,7 +786,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         if hasattr(self, "widget_"+widget):
             widget_func = getattr(self, "widget_"+widget)
 
-        widget_func(self, key_path, value=rec.get('value'), 
+        widget_func(self, key_path, value=rec.get('value'),
             default=spec.get('value'), validate=validate, **args)
 
     def change_value(self, options, index):
@@ -946,11 +946,11 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
            #      preview.run_command("select_all")
            #      preview.run_command("insert", {"characters": char})
 
-           #  self.window.show_quick_panel(UNICODE_DATA, on_done, 
-           #      sublime.MONOSPACE_FONT, -1, on_highlighted)   
+           #  self.window.show_quick_panel(UNICODE_DATA, on_done,
+           #      sublime.MONOSPACE_FONT, -1, on_highlighted)
 
         options.insert( 0, [ "QUIT (Esc)", "End Edit Settings" ])
-        option_data.insert( 0, 
+        option_data.insert( 0,
             {"description": "You can press Esc, or select this option to end "
                             "editing settings.\n"})
 
@@ -975,7 +975,7 @@ class EditSelectedPreferences(sublime_plugin.WindowCommand):
         current_syntax = get_current_syntax(self.window.active_view())
 
         basic = [
-            ["Preferences", "General Settings"], 
+            ["Preferences", "General Settings"],
             ["Distraction Free", "Preferences for Distraction Free Mode"],
             ["Current Syntax", "%s-specific Preferences" % current_syntax],
             ["Current Project", "Project-specific Preferences"],
@@ -983,9 +983,9 @@ class EditSelectedPreferences(sublime_plugin.WindowCommand):
             ]
 
         # TODO: fix this first line. it is strange
-        options = basic + [ 
-            [k, k in self.syntax_names and "Syntax-specific Preferences" or "Package Settings"] 
-            for k in set(list(self.preferences.keys()) + self.syntax_names) 
+        options = basic + [
+            [k, k in self.syntax_names and "Syntax-specific Preferences" or "Package Settings"]
+            for k in set(list(self.preferences.keys()) + self.syntax_names)
             if k not in basic and k not in set(["Distraction Free", "Preferences", "Current Syntax", "Current Project", "This View"])
             ]
 
