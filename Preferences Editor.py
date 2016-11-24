@@ -204,6 +204,7 @@ def load_preferences():
     preferences_files = sublime.find_resources("*.sublime-settings")
     for pref_file in preferences_files:
 
+        # print( "pref_file: {0}".format( pref_file ) )
         name = os.path.basename(pref_file).rsplit('.', 1)[0]
 
         platform = "any"
@@ -873,6 +874,13 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
         current_syntax = get_current_syntax(self.view, syntax)
         self.current_syntax = current_syntax
+
+        # for pref in self.preferences: print( "pref: {0}".format( pref ) )
+
+        if self.current_syntax not in self.preferences:
+
+            self.preferences[self.current_syntax] = self.current_syntax
+
         self.preferences['Current Syntax'] = self.preferences[self.current_syntax]
         self.name = name
         #import spdb ; spdb.start()
