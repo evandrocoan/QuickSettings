@@ -331,13 +331,11 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         #       true_string += ", default"
         #   true_string += ")"
 
-        options = ["true", "false"]
+        options = ["BACK (Open the Last Menu)", "true", "false"]
 
-        name, type, key = self.split_key_path(key_path)
-
-        key_path, key_value = pref_editor.get_pref_rec(name, key)
-
-        view = pref_editor.window.active_view()
+        name    , type     , key = self.split_key_path(key_path)
+        key_path, key_value      = pref_editor.get_pref_rec(name, key)
+        view                     = pref_editor.window.active_view()
 
         def done(index):
             view.erase_status("preferences_editor")
@@ -345,11 +343,14 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             if index < 0:
                 self.view.settings().set(key, key_value['value'])
                 return self.shutdown()
-
-            if index == 0:
+            elif index == 0:
+                self.view.settings().set(key, key_value['value'])
+            elif index == 1:
                 pref_editor.set_pref_value(key_path, True, default)
             else:
                 pref_editor.set_pref_value(key_path, False, default)
+
+            self.preferences_selector()
 
         def highlight(index):
             if index == 0:
@@ -357,7 +358,9 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             else:
                 self.view.settings().set(key, False)
 
+        # for op in options: print( "op: {0}".format( op ) )
         view.set_status("preferences_editor", "Set %s" % key_path)
+
         show_panel(view, options, done, highlight)
 
 
@@ -581,10 +584,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             name = self.current_syntax
 
         save_preference(self.view, name, key, value, default=default, type=type)
-
         self.options[self.index][1] = sublime.encode_value(value, False)
-
-        self.preferences_selector()
 
         #settings = sublime.load_settings(name+'.sublime-settings')
         #settings.set()
@@ -951,9 +951,9 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
         options.insert( 0, [ "QUIT (Esc)", "End Edit Settings" ] )
         option_data.insert( 0, { "description": "You can press Esc, or select this option to end"
-                                " editing settings.\n" } )
+                                 " editing settings.\n" } )
 
-        options.insert( 1, [ "BACK (Open the Main Menu)", "Choose Setting to Edit" ] )
+        options.insert( 1, [ "BACK (Open the Main Menu)", "Choose another Setting to Edit" ] )
         option_data.insert( 1, { "description": "Select this option to take another setting to edit.\n" } )
 
         def done(index):
@@ -1000,6 +1000,7 @@ class EditSelectedPreferences(sublime_plugin.WindowCommand):
         def done(index):
             self.window.run_command("edit_preferences", {"name": options[index][0]})
 
+        # for op in options: print( "op: {0}".format( op ) )
         show_panel(self.window.active_view(), options, done)
 
 
