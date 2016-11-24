@@ -949,14 +949,22 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
            #  self.window.show_quick_panel(UNICODE_DATA, on_done,
            #      sublime.MONOSPACE_FONT, -1, on_highlighted)
 
-        options.insert( 0, [ "QUIT (Esc)", "End Edit Settings" ])
-        option_data.insert( 0,
-            {"description": "You can press Esc, or select this option to end "
-                            "editing settings.\n"})
+        options.insert( 0, [ "QUIT (Esc)", "End Edit Settings" ] )
+        option_data.insert( 0, { "description": "You can press Esc, or select this option to end"
+                                " editing settings.\n" } )
+
+        options.insert( 1, [ "BACK (Open the Main Menu)", "Choose Setting to Edit" ] )
+        option_data.insert( 1, { "description": "Select this option to take another setting to edit.\n" } )
 
         def done(index):
             if index < 0: return self.shutdown()
             if index == 0: return self.shutdown()
+            if index == 1:
+
+                self.shutdown()
+                self.window.run_command("edit_selected_preferences")
+                return
+
             self.index = index
             self.change_value(self.options, index)
 
