@@ -96,3 +96,7 @@ Changes
       ``true``.
 
     - There are new commands added to command palette.
+
+
+## License
+See the `LICENSE.txt` file under this repository.
