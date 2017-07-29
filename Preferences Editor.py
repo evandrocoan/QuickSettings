@@ -876,14 +876,15 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         self.current_syntax = current_syntax
 
         # for pref in self.preferences: print( "pref: {0}".format( pref ) )
-
         if self.current_syntax not in self.preferences:
-
             self.preferences[self.current_syntax] = self.current_syntax
 
-        self.preferences['Current Syntax'] = self.preferences[self.current_syntax]
         self.name = name
         #import spdb ; spdb.start()
+
+        # https://bitbucket.org/klorenz/sublimepreferenceseditor/pull-requests/4
+        if self.current_syntax in self.preferences:
+            self.preferences['Current Syntax'] = self.preferences[self.current_syntax]
 
         option_data = []
         options = []
