@@ -31,6 +31,7 @@ from debug_tools import Debugger
 # 127 - All debugging levels at the same time.
 log = Debugger( 127, "PreferencesEditor", "DebugLog.txt" )
 
+log.clear_log_file()
 log( 1, "Debugging" )
 log( 1, "..." )
 log( 1, "..." )
@@ -1085,7 +1086,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         if self.current_syntax in self.preferences:
             self.preferences['Current Syntax'] = self.preferences[self.current_syntax]
 
-        option_data = []
+        options_data = []
         options = []
 
         if name is None:
@@ -1108,7 +1109,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                     options.append( [ key_path, sublime.encode_value(key_value.get('value'), False) ] )
 
                     log( 2, "run, self.get_DefaultValueAndDescription(name, key): " + str( self.getDefaultValueAndDescription(name, key) ) )
-                    option_data.append( self.getDefaultValueAndDescription(name, key) )
+                    options_data.append( self.getDefaultValueAndDescription(name, key) )
 
         else:
             self.settings_indicate_name = False
@@ -1121,7 +1122,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                 options.append( [ key_path, sublime.encode_value(key_value.get('value'), False) ] )
 
                 log( 2, "run, self.get_DefaultValueAndDescription(name, key): " + str( self.getDefaultValueAndDescription(name, key) ) )
-                option_data.append( self.getDefaultValueAndDescription(name, key) )
+                options_data.append( self.getDefaultValueAndDescription(name, key) )
 
         #import spdb ; spdb.start()
 
@@ -1132,7 +1133,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
         def on_highlighted(index):
             help_view.run_command("select_all")
-            description = option_data[index]['description']
+            description = options_data[index]['description']
 
             if description.startswith("=\n"):
                 description = description[2:]
@@ -1169,11 +1170,11 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
            #      sublime.MONOSPACE_FONT, -1, on_highlighted)
 
         options.insert( 0, [ "QUIT (Esc)", "End Edit Settings" ] )
-        option_data.insert( 0, { "description": "You can press Esc, or select this option to end"
+        options_data.insert( 0, { "description": "You can press Esc, or select this option to end"
                                  " editing settings.\n" } )
 
         options.insert( 1, [ "BACK (Open the Main Menu)", "Choose another Setting to Edit" ] )
-        option_data.insert( 1, { "description": "Select this option to take another setting to edit.\n" } )
+        options_data.insert( 1, { "description": "Select this option to take another setting to edit.\n" } )
 
         def done(index):
 
