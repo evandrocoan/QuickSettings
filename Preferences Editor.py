@@ -337,7 +337,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
         options = ["BACK (Open the Last Menu)", "true", "false"]
 
-        name    , type     , key = self.split_key_path(key_path)
+        name    , type     , key = self.convertSettingPathToNameTypeAndKey(key_path)
         key_path, key_value      = pref_editor.getPreferencesPathAndValue(name, key)
         view                     = pref_editor.window.active_view()
 
@@ -371,7 +371,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
     def widget_select(self, pref_editor, key_path, value=None, default=None, validate=None, values=[]):
         settings = self.view.settings()
 
-        name, type, key = self.split_key_path(key_path)
+        name, type, key = self.convertSettingPathToNameTypeAndKey(key_path)
         key_value = pref_editor.getPreferencesPathAndValue(name, key)[1]
         view_specific = settings.has(key) and settings.get(key) != key_value['value']
 
@@ -482,7 +482,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
     def widget_select_resource(self, pref_editor, key_path, value=None, default=None, validate=None, find_resources="", strip_path=True, strip_suffix=True):
         resources = sublime.find_resources(find_resources)
 
-        name, type, key = self.split_key_path(key_path)
+        name, type, key = self.convertSettingPathToNameTypeAndKey(key_path)
 
         settings = self.view.settings()
         key_value = pref_editor.getPreferencesPathAndValue(name, key)[1]
@@ -521,7 +521,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 
     def widget_input(self, pref_editor, key_path, value=None, default=None, validate=None):
-        name, type, key = self.split_key_path(key_path)
+        name, type, key = self.convertSettingPathToNameTypeAndKey(key_path)
 
         view = self.view
         view.set_status("preferences_editor", "Set %s" % key_path)
@@ -567,7 +567,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         show_input(self.view, key, value, done, change, cancel)
 
 
-    def split_key_path(self, key_path):
+    def convertSettingPathToNameTypeAndKey(self, key_path):
         name = self.name
         type = "User"
 
@@ -582,7 +582,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 
     def set_pref_value(self, key_path, value, default=None):
-        name, type, key = self.split_key_path(key_path)
+        name, type, key = self.convertSettingPathToNameTypeAndKey(key_path)
 
         if name == "Current Syntax":
             name = self.current_syntax
@@ -724,7 +724,28 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         return name in self.syntax_names or name in (
             "Distraction Free", "Current Syntax", "Current Project", "This View")
 
-    def get_spec(self, name, key):
+    def getDefaultValueAndDescription(self, name, key):
+        """
+        @name  the name of the setting file name on self.preferences
+        @key   the name of the setting
+
+        get_DefaultValueAndDescription, name: Preferences
+        get_DefaultValueAndDescription, key:  word_wrap
+
+        get_DefaultValueAndDescription, name: Preferences
+        get_DefaultValueAndDescription, key:  wrap_width
+
+        get_DefaultValueAndDescription, name: Default
+        get_DefaultValueAndDescription, key:  adaptive_dividers
+
+        @return a dictionary with the keys `value` and `description` for the given setting file and setting name.
+
+        {'value': 0, 'description': 'Set to a value other than 0 to force wrapping at that column rather than the\nwindow width\n'}
+        {'value': './\\()"\'-:,.;<>~!@#$%^&*|+=[]{}`~?', 'description': 'Characters that are considered to separate words\n'}
+        """
+        print( 'get_DefaultValueAndDescription, name: ' + str( name ) )
+        print( 'get_DefaultValueAndDescription, key:  ' + str( key ) )
+
         pref = self.preferences[name]
 
         for k in 'default', 'default_'+self.platform:
@@ -732,12 +753,12 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                 return pref[k][key]
 
         if self.is_preferences(name):
-            return self.get_spec('Preferences', key)
+            return self.getDefaultValueAndDescription('Preferences', key)
 
         return None
 
     def get_meta(self, name, key, spec=None):
-        meta = self.get_spec(name, "meta."+key)
+        meta = self.getDefaultValueAndDescription(name, "meta."+key)
         #sys.stderr.write("meta: %s\n" % meta)
         if meta: return meta.get('value')
 
@@ -768,11 +789,16 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 
     def run_widget(self, key_path):
-        name, type, key = self.split_key_path(key_path)
+        print( "run_widget, key_path: " + str( key_path ) )
+        name, type, key = self.convertSettingPathToNameTypeAndKey(key_path)
+
+        print( "run_widget, name: " + str( name ) )
+        print( "run_widget, type: " + str( type ) )
+        print( "run_widget, key:  " + str( key ) )
 
         #import spdb ; spdb.start()
 
-        spec = self.get_spec(name, key)
+        spec = self.getDefaultValueAndDescription(name, key)
         meta = self.get_meta(name, key, spec)
         rec  = self.getPreferencesPathAndValue(name, key)[1]
 
@@ -802,7 +828,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
     def change_value(self, options, index):
         key_path = options[index][0]
 
-        name, type, key = self.split_key_path(key_path)
+        name, type, key = self.convertSettingPathToNameTypeAndKey(key_path)
 
         options = [
             [ "Change Value", "" ],
@@ -821,7 +847,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
     #           [ "Set for Linux only", ""]
     #       ]
 
-        spec = self.get_spec(name, key)
+        spec = self.getDefaultValueAndDescription(name, key)
 
         view = self.window.active_view()
 
@@ -910,7 +936,9 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                 for key in sorted(self.get_pref_keys(name)):
                     key_path, key_value = self.getPreferencesPathAndValue(name, key)
                     options.append( [ key_path, sublime.encode_value(key_value.get('value'), False) ] )
-                    option_data.append( self.get_spec(name, key) )
+
+                    print( "run, self.getDefaultValueAndDescription(name, key): " + str( self.getDefaultValueAndDescription(name, key) ) )
+                    option_data.append( self.getDefaultValueAndDescription(name, key) )
 
         else:
             self.settings_indicate_name = False
@@ -921,7 +949,9 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                 # print( 'key_path:  ' + str( key_path ) )
                 # print( 'key_value: ' + str( key_value ) )
                 options.append( [ key_path, sublime.encode_value(key_value.get('value'), False) ] )
-                option_data.append( self.get_spec(name, key) )
+
+                print( "run, self.getDefaultValueAndDescription(name, key): " + str( self.getDefaultValueAndDescription(name, key) ) )
+                option_data.append( self.getDefaultValueAndDescription(name, key) )
 
         #import spdb ; spdb.start()
 
