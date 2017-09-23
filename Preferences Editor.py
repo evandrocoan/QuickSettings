@@ -40,7 +40,7 @@ standard_settings_names = ( "Distraction Free", "Current Syntax", "Current Proje
 standard_settings_types = ('default', 'default_'+sublime.platform())
 
 
-def show_panel(view, options, done, highlighted=None):
+def show_quick_panel(view, options, done, highlighted=None):
     sublime.set_timeout(lambda: view.window().show_quick_panel(options, done, 0, -1, highlighted), 10)
 
 
@@ -256,7 +256,7 @@ def save_preference(view, name, key, value, type=None, default=None):
 
 
 def load_preferences():
-    log( 2, "load_preferences" )
+    log( 2, "load__preferences" )
 
     # for syntax specific, we need syntax names
     language_files = sublime.find_resources("*.tmLanguage")
@@ -265,7 +265,7 @@ def load_preferences():
     for f in language_files:
         syntax_name = os.path.basename(f).rsplit('.', 1)[0]
 
-        log( 2, "load_preferences, syntax_name: " + syntax_name )
+        log( 2, "load__preferences, syntax_name: " + syntax_name )
         syntax_names.append( syntax_name )
 
     preferences = {}
@@ -273,10 +273,11 @@ def load_preferences():
 
     for preference_file in preferences_files:
 
-        log( 2, "load_preferences, preference_file: {0}".format( preference_file ) )
-        preference_name = os.path.basename(preference_file).rsplit('.', 1)[0]
+        log( 2, "load__preferences, preference_file: {0}".format( preference_file ) )
+        preference_name = preference_file.replace("Packages/", "").replace("/", "_")
+        preference_name = preference_name.replace(" ", "_").rsplit('.', 1)[0]
 
-        log( 2, "load_preferences, preference_name: {0}".format( preference_name ) )
+        log( 2, "load__preferences, preference_name: {0}".format( preference_name ) )
         platform = "any"
 
         if preference_name[-5:].lower() == "(osx)":
@@ -290,6 +291,8 @@ def load_preferences():
         elif preference_name[-7:].lower() == "(linux)":
             preference_name = preference_name[:-8]
             platform = "linux"
+
+        log( 2, "load__preferences, preference_name: {0}".format( preference_name ) )
 
         if "/User/" in preference_file:
             type = "user"
@@ -447,7 +450,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
         # for op in options: log( 2, "op: {0}".format( op ) )
         view.set_status("preferences_editor", "Set %s" % key_path)
-        show_panel(view, options, done, highlight)
+        show_quick_panel(view, options, done, highlight)
 
     def widget_select(self, pref_editor, key_path, value=None, default=None, validate=None, values=[]):
         settings = self.view.settings()
@@ -506,7 +509,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             settings.set(key, values[index])
 
         view.set_status("preferences_editor", "Set %s" % key_path)
-        show_panel(view, options, done, highlight)
+        show_quick_panel(view, options, done, highlight)
 
     def widget_multiselect(self, pref_editor, key_path, value=None, default=None, validate=None, values=None):
         view = pref_editor.window.active_view()
@@ -526,7 +529,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                 value.append(other[index])
                 do_show_panel()
 
-            show_panel(view, options, done)
+            show_quick_panel(view, options, done)
 
         def do_remove_option():
             options = \
@@ -543,7 +546,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                 value.remove(value[index])
                 do_show_panel()
 
-            show_panel(view, options, done)
+            show_quick_panel(view, options, done)
 
 
         def do_show_panel():
@@ -572,7 +575,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                     do_remove_option()
 
             view.set_status("preferences_editor", "Set %s" % key_path)
-            show_panel(view, options, done)
+            show_quick_panel(view, options, done)
 
         do_show_panel()
 
@@ -620,7 +623,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             settings.set(key, resources[index])
 
         view.set_status("preferences_editor", "Set %s" % key_path)
-        show_panel(view, options, done, highlight)
+        show_quick_panel(view, options, done, highlight)
 
 
     def widget_input(self, pref_editor, key_path, value=None, default=None, validate=None):
@@ -1037,7 +1040,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             self.run_widget(key_path)
 
         else:
-            show_panel(self.window.active_view(), options, done)
+            show_quick_panel(self.window.active_view(), options, done)
 
     def shutdown(self):
         self.window.run_command("hide_panel", {"panel": "output.preferences_editor_help"})
@@ -1054,25 +1057,23 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             One of OSX, Windows or Linux, for editing platform specific settings.
         """
 
-        self.platform = sublime.platform()
+        self.view        = self.window.active_view()
+        self.platform    = sublime.platform()
         self.preferences = load_preferences()
-        self.view = self.window.active_view()
 
-        loglevel = self.view.settings().get('preferences_editor_loglevel', '0')
+        loglevel       = self.view.settings().get('preferences_editor_loglevel', '0')
         log._log_level = int( loglevel )
 
-        self.settings_indicate_type = \
-            self.view.settings().get('preferences_editor_indicate_default_settings')
-
         self.settings_indicate_name = True
+        self.settings_indicate_type = self.view.settings().get('preferences_editor_indicate_default_settings')
 
         syntax_names, plaintext_syntax, reStructuredText_syntax = load_syntax_names(True)
         self.syntax_names = syntax_names
 
-        for n in syntax_names:
+        for syntax in syntax_names:
 
-            if n not in self.preferences:
-                self.preferences[n] = { 'default': {}, 'default_'+sublime.platform(): {} }
+            if syntax not in self.preferences:
+                self.preferences[syntax] = { 'default': {}, 'default_'+sublime.platform(): {} }
 
         self.preferences['Current Project'] = { 'default': {}, 'default_'+sublime.platform(): {} }
 
@@ -1092,8 +1093,8 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         if self.current_syntax in self.preferences:
             self.preferences['Current Syntax'] = self.preferences[self.current_syntax]
 
-        options_data = []
         options = []
+        options_data = []
 
         def process_keys():
 
@@ -1110,6 +1111,16 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                 options_data.append( defaultValueAndDescription )
 
         if name is None:
+            self.is_main_panel = True
+
+            options = \
+            [
+                ["Preferences", "General Settings"],
+                ["Distraction Free", "Preferences for Distraction Free Mode"],
+                ["Current Syntax", "%s-specific Preferences" % current_syntax],
+                ["Current Project", "Project-specific Preferences"],
+                ["This View", "Preferences for this View only"]
+            ]
 
             for name in sorted(self.preferences.keys()):
 
@@ -1124,7 +1135,9 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                 process_keys()
 
         else:
+            self.is_main_panel          = False
             self.settings_indicate_name = False
+
             process_keys()
 
         #import spdb ; spdb.start()
@@ -1184,52 +1197,29 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             if index < 0:
                 return self.shutdown()
 
-            if index == 0:
-                return self.shutdown()
+            elif index == 0:
 
-            if index == 1:
-                self.shutdown()
-                self.window.run_command("edit_selected_preferences")
-                return
+                if self.is_main_panel:
+                    self.shutdown()
 
-            self.index = index
-            self.change_value(self.options, index)
+                else:
+                    self.shutdown()
+                    self.window.run_command("edit_preferences")
+
+            # When it is the main panel, the indexes are not shifted by 1
+            elif self.is_main_panel:
+                self.window.run_command("edit_preferences", {"name": options[index][0]})
+
+            # When it is not the main panel, the indexes are shifted by 1
+            else:
+                self.index = index
+                self.change_value(self.options, index)
 
         # log( 2, pprint.pformat(options) )
 
         self.options = options
-        self.preferences_selector = lambda: show_panel(self.view, self.options, done, on_highlighted)
+        self.preferences_selector = lambda: show_quick_panel(self.view, self.options, done, on_highlighted)
         self.preferences_selector()
 
-
-class EditSelectedPreferences(sublime_plugin.WindowCommand):
-
-    def run(self):
-        self.preferences  = load_preferences()
-        self.syntax_names = load_syntax_names()
-        current_syntax = get_current_syntax(self.window.active_view())
-
-        basic = \
-        [
-            ["Preferences", "General Settings"],
-            ["Distraction Free", "Preferences for Distraction Free Mode"],
-            ["Current Syntax", "%s-specific Preferences" % current_syntax],
-            ["Current Project", "Project-specific Preferences"],
-            ["This View", "Preferences for this View only"]
-        ]
-
-        # TODO: fix this first line. it is strange
-        options = basic + \
-        [
-            [ k, k in self.syntax_names and "Syntax-specific Preferences" or "Package Settings" ]
-            for k in set(list(self.preferences.keys()) + self.syntax_names)
-            if k not in basic and k not in set(["Distraction Free", "Preferences", "Current Syntax", "Current Project", "This View"])
-        ]
-
-        def done(index):
-            self.window.run_command("edit_preferences", {"name": options[index][0]})
-
-        # for op in options: log( 2, "op: {0}".format( op ) )
-        show_panel(self.window.active_view(), options, done)
 
 
