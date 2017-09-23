@@ -150,7 +150,6 @@ def get_descriptions(data):
 
             if not s: s = "\n"
             comment += s
-            lines.append("\n")
             continue
 
         m = COMMENT_RE2.match(line)
@@ -349,7 +348,7 @@ def load_preferences():
                     preference_settings[setting_name]['value'] = setting_value
 
             except:
-                log(1, "Error reading %s (preference_data is %s)", preference_file, preference_data, exc_info=1)
+                log(1, "Error reading %s (preference_data is %s)", preference_file, preference_data)
 
             preference.update(preference_settings)
 
