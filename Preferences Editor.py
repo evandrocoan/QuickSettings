@@ -118,9 +118,8 @@ def get_descriptions(data):
     KEY_RE     = re.compile(r'\s*"([^"]+)"\s*:')
     INDENT_RE = re.compile(r'^\s*')
 
-    d = {}
+    description = {}
     comment = ""
-    lines = []
     is_comment = False
 
     for line in data.splitlines(1):
@@ -176,12 +175,10 @@ def get_descriptions(data):
 
             if indent:
                 comment = ''.join([ l.startswith(indent) and l[len(indent):] or l for l in comment.splitlines(1) ])
-            d[m.group(1)] = {"description": comment.replace("\r", "") or "No help available :("}
+            description[m.group(1)] = {"description": comment.replace("\r", "") or "No help available :("}
             comment = ""
 
-        lines.append(line)
-
-    return d, "".join(lines).replace("\r", "")
+    return description
 
 
 # resolution order of settings
@@ -260,36 +257,42 @@ def save_preference(view, name, key, value, type=None, default=None):
 
 
 def load_preferences():
+    log( 2, "load_preferences" )
+
     # for syntax specific, we need syntax names
     language_files = sublime.find_resources("*.tmLanguage")
     syntax_names = []
 
     for f in language_files:
-        syntax_names.append(os.path.basename(f).rsplit('.', 1)[0])
+        syntax_name = os.path.basename(f).rsplit('.', 1)[0]
 
-    prefs = {}
+        log( 2, "load_preferences, syntax_name: " + syntax_name )
+        syntax_names.append( syntax_name )
+
+    preferences = {}
     preferences_files = sublime.find_resources("*.sublime-settings")
 
-    for pref_file in preferences_files:
+    for preference_file in preferences_files:
 
-        # log( 2, "pref_file: {0}".format( pref_file ) )
-        name = os.path.basename(pref_file).rsplit('.', 1)[0]
+        log( 2, "load_preferences, preference_file: {0}".format( preference_file ) )
+        preference_name = os.path.basename(preference_file).rsplit('.', 1)[0]
 
+        log( 2, "load_preferences, preference_name: {0}".format( preference_name ) )
         platform = "any"
 
-        if name[-5:].lower() == "(osx)":
-            name = name[:-6]
+        if preference_name[-5:].lower() == "(osx)":
+            preference_name = preference_name[:-6]
             platform = "osx"
 
-        elif name[-9:].lower() == "(windows)":
-            name = name[:-10]
+        elif preference_name[-9:].lower() == "(windows)":
+            preference_name = preference_name[:-10]
             platform = "windows"
 
-        elif name[-7:].lower() == "(linux)":
-            name = name[:-8]
+        elif preference_name[-7:].lower() == "(linux)":
+            preference_name = preference_name[:-8]
             platform = "linux"
 
-        if "/User/" in pref_file:
+        if "/User/" in preference_file:
             type = "user"
 
         else:
@@ -298,59 +301,59 @@ def load_preferences():
         if platform != "any":
             type = type+"_"+platform
 
-        if name not in prefs:
-            prefs[name] = {}
+        if preference_name not in preferences:
+            preferences[preference_name] = {}
 
         syntax = None
 
-        if 0 and name in syntax_names:
+        if 0 and preference_name in syntax_names:
             type = "syntax_"+type
-            syntax = name
-            name = "Preferences"
+            syntax = preference_name
+            preference_name = "Preferences"
 
-            if type not in prefs[name]:
-                prefs[name][type] = {}
+            if type not in preferences[preference_name]:
+                preferences[preference_name][type] = {}
 
-            if syntax not in prefs[name][type]:
-                prefs[name][type][syntax] = {}
+            if syntax not in preferences[preference_name][type]:
+                preferences[preference_name][type][syntax] = {}
 
-            pref = prefs[name][type][syntax]
+            preference = preferences[preference_name][type][syntax]
 
         else:
-            if type not in prefs[name]:
-                prefs[name][type] = {}
+            if type not in preferences[preference_name]:
+                preferences[preference_name][type] = {}
 
-            pref = prefs[name][type]
+            preference = preferences[preference_name][type]
 
-        #sys.stderr.write("name: %s, type: %s, syntax: %s\n" % (name, type, syntax))
-        data = sublime.load_resource(pref_file)
+        #sys.stderr.write("preference_name: %s, type: %s, syntax: %s\n" % (preference_name, type, syntax))
+        preference_data = sublime.load_resource(preference_file)
 
-        if data:
-            new_data = {}
+        if preference_data:
+            preference_settings = {}
 
             try:
                 #import spdb ; spdb.start()
-                d, data2 = get_descriptions(data)
+                description = get_descriptions(preference_data)
 
-                #sys.stderr.write("data: %s\n" % data)
-                data = sublime.decode_value(data)
+                #sys.stderr.write("preference_data: %s\n" % preference_)
+                preference_data = sublime.decode_value(preference_data)
 
-                for k,v in data.items():
+                for setting_name, setting_value in preference_data.items():
 
-                    if k not in d:
-                        new_data[k] = {"description": "No help available :("}
+                    if setting_name not in description:
+                        preference_settings[setting_name] = {"description": "No help available :("}
 
                     else:
-                        new_data[k] = d[k]
+                        preference_settings[setting_name] = description[setting_name]
 
-                    new_data[k]['value'] = v
+                    preference_settings[setting_name]['value'] = setting_value
 
             except:
-                log(1, "Error reading %s (data is %s)", pref_file, data, exc_info=1)
+                log(1, "Error reading %s (preference_data is %s)", preference_file, preference_data, exc_info=1)
 
-            pref.update(new_data)
+            preference.update(preference_settings)
 
-    return prefs
+    return preferences
 
 
 def load_syntax_names(get_specials=False):
@@ -829,10 +832,12 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
     def get_pref_keys(self, name):
         pref = self.preferences[name]
-        pref_default = {'default': {}, 'default_'+sublime.platform(): {}}
 
         if self.is_preferences(name):
             pref_default = self.preferences['Preferences']
+
+        else:
+            pref_default = {'default': {}, 'default_'+sublime.platform(): {}}
 
         return set \
         (
@@ -1042,8 +1047,10 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         r"""
         :param syntax:
             Name of syntax, you want to edit settings for
+
         :param name:
             Name of settings, you want to edit.
+
         :param platform:
             One of OSX, Windows or Linux, for editing platform specific settings.
         """
@@ -1089,6 +1096,20 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         options_data = []
         options = []
 
+        def process_keys():
+
+            for key in sorted(self.get_pref_keys(name)):
+                key_path, key_value = self.getPreferencesPathAndValue(name, key)
+
+                log( 2, 'run, key_path:  ' + str( key_path ) )
+                log( 2, 'run, key_value: ' + str( key_value ) )
+                options.append( [ key_path, sublime.encode_value(key_value.get('value'), False) ] )
+
+                defaultValueAndDescription = self.getDefaultValueAndDescription(name, key)
+                log( 2, "run, self.get_DefaultValueAndDescription(name, key): " + str( defaultValueAndDescription ) )
+
+                options_data.append( defaultValueAndDescription )
+
         if name is None:
 
             for name in sorted(self.preferences.keys()):
@@ -1101,28 +1122,11 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                 else:
                     if name == current_syntax: continue
 
-                for key in sorted(self.get_pref_keys(name)):
-                    key_path, key_value = self.getPreferencesPathAndValue(name, key)
-
-                    log( 2, 'run, key_path:  ' + str( key_path ) )
-                    log( 2, 'run, key_value: ' + str( key_value ) )
-                    options.append( [ key_path, sublime.encode_value(key_value.get('value'), False) ] )
-
-                    log( 2, "run, self.get_DefaultValueAndDescription(name, key): " + str( self.getDefaultValueAndDescription(name, key) ) )
-                    options_data.append( self.getDefaultValueAndDescription(name, key) )
+                process_keys()
 
         else:
             self.settings_indicate_name = False
-
-            for key in sorted(self.get_pref_keys(name)):
-                key_path, key_value = self.getPreferencesPathAndValue(name, key)
-
-                log( 2, 'run, key_path:  ' + str( key_path ) )
-                log( 2, 'run, key_value: ' + str( key_value ) )
-                options.append( [ key_path, sublime.encode_value(key_value.get('value'), False) ] )
-
-                log( 2, "run, self.get_DefaultValueAndDescription(name, key): " + str( self.getDefaultValueAndDescription(name, key) ) )
-                options_data.append( self.getDefaultValueAndDescription(name, key) )
+            process_keys()
 
         #import spdb ; spdb.start()
 
