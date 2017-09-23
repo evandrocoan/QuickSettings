@@ -1,13 +1,47 @@
-import sublime, os, sublime_plugin, re, sys, logging
 
-log = logging.getLogger('prefedit')
-log.setLevel(logging.ERROR)
+import os
+import re
+import sys
+import pprint
+
+import sublime
+import sublime_plugin
+
+def assert_path(module):
+    """
+        Import a module from a relative path
+        https://stackoverflow.com/questions/279237/import-a-module-from-a-relative-path
+    """
+    if module not in sys.path:
+        sys.path.append( module )
+
+# Import the debug tools
+assert_path( os.path.join( os.path.dirname( os.path.dirname( os.path.realpath( __file__ ) ) ), 'PythonDebugTools' ) )
+
+# Import the debugger
+from debug_tools import Debugger
+
+# Enable debug messages: (bitwise)
+#
+# 0   - Disabled debugging.
+# 1   - Basic logging messages.
+# 2   - AgentPlayer       class' notices.
+# 4   - StickIntelligence class' notices.
+#
+# 127 - All debugging levels at the same time.
+log = Debugger( 127, "PreferencesEditor", "DebugLog.txt" )
+
+log( 1, "Debugging" )
+log( 1, "..." )
+log( 1, "..." )
 
 standard_settings_names = ( "Distraction Free", "Current Syntax", "Current Project", "This View" )
 standard_settings_types = ('default', 'default_'+sublime.platform())
 
+
 def show_panel(view, options, done, highlighted=None):
     sublime.set_timeout(lambda: view.window().show_quick_panel(options, done, 0, -1, highlighted), 10)
+
 
 def json_list(x):
 
@@ -16,13 +50,14 @@ def json_list(x):
         #sys.stderr.write("d: %s\n" % d)
 
     except Exception as e:
-        log.error("cannot decode %s", repr(x), exc_info=1)
+        log( 1, "cannot decode %s", repr(x), exc_info=1 )
         raise ValueError(str(e))
 
     if not isinstance(d, list):
         raise ValueError("Expected a JSON list")
 
     return d
+
 
 def json_dict(x):
 
@@ -31,7 +66,7 @@ def json_dict(x):
         #sys.stderr.write("d: %s\n" % d)
 
     except Exception as e:
-        log.error("cannot decode %s", repr(x), exc_info=1)
+        log(1, "cannot decode %s", repr(x), exc_info=1)
         raise ValueError(str(e))
 
     if not isinstance(d, dict):
@@ -147,6 +182,7 @@ def get_descriptions(data):
 
     return d, "".join(lines).replace("\r", "")
 
+
 # resolution order of settings
 #    Packages/Default/Preferences.sublime-settings
 #    Packages/Default/Preferences (<platform>).sublime-settings
@@ -168,6 +204,7 @@ def get_current_syntax(view, syntax=None):
         current_syntax = os.path.basename(current_syntax).rsplit('.', 1)[0]
 
     return current_syntax
+
 
 def save_preference(view, name, key, value, type=None, default=None):
 
@@ -234,7 +271,7 @@ def load_preferences():
 
     for pref_file in preferences_files:
 
-        # print( "pref_file: {0}".format( pref_file ) )
+        # log( 2, "pref_file: {0}".format( pref_file ) )
         name = os.path.basename(pref_file).rsplit('.', 1)[0]
 
         platform = "any"
@@ -308,11 +345,12 @@ def load_preferences():
                     new_data[k]['value'] = v
 
             except:
-                log.warning("Error reading %s (data is %s)", pref_file, data, exc_info=1)
+                log(1, "Error reading %s (data is %s)", pref_file, data, exc_info=1)
 
             pref.update(new_data)
 
     return prefs
+
 
 def load_syntax_names(get_specials=False):
     language_files = sublime.find_resources("*.tmLanguage")
@@ -338,6 +376,7 @@ def load_syntax_names(get_specials=False):
         return syntax_names, plaintext_syntax, reStructuredText_syntax
 
     return syntax_names
+
 
 # commands are
 #
@@ -403,7 +442,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             else:
                 self.view.settings().set(key, False)
 
-        # for op in options: print( "op: {0}".format( op ) )
+        # for op in options: log( 2, "op: {0}".format( op ) )
         view.set_status("preferences_editor", "Set %s" % key_path)
         show_panel(view, options, done, highlight)
 
@@ -460,7 +499,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             pref_editor.set_pref_value(key_path, values[index], default)
 
         def highlight(index):
-            log.info("setting %s to %s", key, values[index])
+            log(1, "setting %s to %s", key, values[index])
             settings.set(key, values[index])
 
         view.set_status("preferences_editor", "Set %s" % key_path)
@@ -574,7 +613,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             pref_editor.set_pref_value(key_path, resources[index], default)
 
         def highlight(index):
-            log.info("setting %s to %s", key, resources[index])
+            log(1, "setting %s to %s", key, resources[index])
             settings.set(key, resources[index])
 
         view.set_status("preferences_editor", "Set %s" % key_path)
@@ -621,7 +660,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             try:
                 v = validate(value)
                 view.settings().set(key, v)
-                log.debug("set %s to %s", key, v)
+                log(1, "set %s to %s", key, v)
 
             except ValueError as e:
                 sublime.status_message("Invalid Value: %s" % e)
@@ -828,8 +867,8 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         {'value': 0, 'description': 'Set to a value other than 0 to force wrapping at that column rather than the\nwindow width\n'}
         {'value': './\\()"\'-:,.;<>~!@#$%^&*|+=[]{}`~?', 'description': 'Characters that are considered to separate words\n'}
         """
-        print( 'get_DefaultValueAndDescription, name: ' + str( name ) )
-        print( 'get_DefaultValueAndDescription, key:  ' + str( key ) )
+        log( 2, 'get_DefaultValueAndDescription, name: ' + str( name ) )
+        log( 2, 'get_DefaultValueAndDescription, key:  ' + str( key ) )
 
         pref = self.preferences[name]
 
@@ -901,12 +940,12 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
 
     def run_widget(self, key_path):
-        print( "run_widget, key_path: " + str( key_path ) )
+        log( 2, "run_widget, key_path: " + str( key_path ) )
         name, type, key = self.convertSettingPathToNameTypeAndKey(key_path)
 
-        print( "run_widget, name: " + str( name ) )
-        print( "run_widget, type: " + str( type ) )
-        print( "run_widget, key:  " + str( key ) )
+        log( 2, "run_widget, name: " + str( name ) )
+        log( 2, "run_widget, type: " + str( type ) )
+        log( 2, "run_widget, key:  " + str( key ) )
 
         #import spdb ; spdb.start()
 
@@ -914,15 +953,15 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         meta = self.get_meta(name, key, spec)
         rec  = self.getPreferencesPathAndValue(name, key)[1]
 
-        print( "run_widget, meta:   " + str( meta ) )
+        log( 2, "run_widget, meta:   " + str( meta ) )
 
         widget      = meta.get('widget', 'input')
         validate    = meta.get('validate', 'str')
         args        = meta.get('args', {})
 
-        print( "run_widget, widget:   " + str( widget ) )
-        print( "run_widget, validate: " + str( validate ) )
-        print( "run_widget, args:     " + str( args ) )
+        log( 2, "run_widget, widget:   " + str( widget ) )
+        log( 2, "run_widget, validate: " + str( validate ) )
+        log( 2, "run_widget, args:     " + str( args ) )
 
         if isinstance(validate, list):
             validate_in_list = validate
@@ -947,13 +986,13 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
     def change_value(self, options, index):
         key_path = options[index][0]
-        print( "change__value, key_path: " + str( key_path ) )
+        log( 2, "change__value, key_path: " + str( key_path ) )
 
         name, type, key = self.convertSettingPathToNameTypeAndKey(key_path)
 
-        print( "change__value, name: " + str( name ) )
-        print( "change__value, type: " + str( type ) )
-        print( "change__value, key:  " + str( key ) )
+        log( 2, "change__value, name: " + str( name ) )
+        log( 2, "change__value, type: " + str( type ) )
+        log( 2, "change__value, key:  " + str( key ) )
 
         options = \
         [
@@ -1012,13 +1051,8 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         self.preferences = load_preferences()
         self.view = self.window.active_view()
 
-        loglevel = self.view.settings().get('preferences_editor_loglevel', 'ERROR')
-
-        try:
-            log.setLevel(getattr(logging, loglevel))
-
-        except:
-            log.setLevel(logging.ERROR)
+        loglevel = self.view.settings().get('preferences_editor_loglevel', '0')
+        log._log_level = int( loglevel )
 
         self.settings_indicate_type = \
             self.view.settings().get('preferences_editor_indicate_default_settings')
@@ -1040,7 +1074,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         current_syntax = get_current_syntax(self.view, syntax)
         self.current_syntax = current_syntax
 
-        # for pref in self.preferences: print( "pref: {0}".format( pref ) )
+        # for pref in self.preferences: log( 2, "pref: {0}".format( pref ) )
         if self.current_syntax not in self.preferences:
             self.preferences[self.current_syntax] = self.current_syntax
 
@@ -1068,9 +1102,12 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
                 for key in sorted(self.get_pref_keys(name)):
                     key_path, key_value = self.getPreferencesPathAndValue(name, key)
+
+                    log( 2, 'run, key_path:  ' + str( key_path ) )
+                    log( 2, 'run, key_value: ' + str( key_value ) )
                     options.append( [ key_path, sublime.encode_value(key_value.get('value'), False) ] )
 
-                    print( "run, self.get_DefaultValueAndDescription(name, key): " + str( self.getDefaultValueAndDescription(name, key) ) )
+                    log( 2, "run, self.get_DefaultValueAndDescription(name, key): " + str( self.getDefaultValueAndDescription(name, key) ) )
                     option_data.append( self.getDefaultValueAndDescription(name, key) )
 
         else:
@@ -1079,11 +1116,11 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             for key in sorted(self.get_pref_keys(name)):
                 key_path, key_value = self.getPreferencesPathAndValue(name, key)
 
-                print( 'run, key_path:  ' + str( key_path ) )
-                print( 'run, key_value: ' + str( key_value ) )
+                log( 2, 'run, key_path:  ' + str( key_path ) )
+                log( 2, 'run, key_value: ' + str( key_value ) )
                 options.append( [ key_path, sublime.encode_value(key_value.get('value'), False) ] )
 
-                print( "run, self.get_DefaultValueAndDescription(name, key): " + str( self.getDefaultValueAndDescription(name, key) ) )
+                log( 2, "run, self.get_DefaultValueAndDescription(name, key): " + str( self.getDefaultValueAndDescription(name, key) ) )
                 option_data.append( self.getDefaultValueAndDescription(name, key) )
 
         #import spdb ; spdb.start()
@@ -1154,8 +1191,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             self.index = index
             self.change_value(self.options, index)
 
-        #import pprint
-        #pprint.pprint(options)
+        # log( 2, pprint.pformat(options) )
 
         self.options = options
         self.preferences_selector = lambda: show_panel(self.view, self.options, done, on_highlighted)
@@ -1169,13 +1205,14 @@ class EditSelectedPreferences(sublime_plugin.WindowCommand):
         self.syntax_names = load_syntax_names()
         current_syntax = get_current_syntax(self.window.active_view())
 
-        basic = [
+        basic = \
+        [
             ["Preferences", "General Settings"],
             ["Distraction Free", "Preferences for Distraction Free Mode"],
             ["Current Syntax", "%s-specific Preferences" % current_syntax],
             ["Current Project", "Project-specific Preferences"],
             ["This View", "Preferences for this View only"]
-            ]
+        ]
 
         # TODO: fix this first line. it is strange
         options = basic + \
@@ -1188,7 +1225,7 @@ class EditSelectedPreferences(sublime_plugin.WindowCommand):
         def done(index):
             self.window.run_command("edit_preferences", {"name": options[index][0]})
 
-        # for op in options: print( "op: {0}".format( op ) )
+        # for op in options: log( 2, "op: {0}".format( op ) )
         show_panel(self.window.active_view(), options, done)
 
 

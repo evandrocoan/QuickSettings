@@ -98,11 +98,11 @@
 	"preferences_editor_indicate_default_settings": true,
 
 	// Log level
-	"preferences_editor_loglevel": "ERROR",
+	"preferences_editor_loglevel": "127",
 
 	"meta.preferences_editor_loglevel": {
 		"widget": "select",
-		"args": { "values": ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"] },
+		"args": { "values": ["0", "1", "127"] },
 		"validate": "str"
 	}
 
