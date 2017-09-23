@@ -338,7 +338,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         options = ["BACK (Open the Last Menu)", "true", "false"]
 
         name    , type     , key = self.split_key_path(key_path)
-        key_path, key_value      = pref_editor.get_pref_rec(name, key)
+        key_path, key_value      = pref_editor.getPreferencesPathAndValue(name, key)
         view                     = pref_editor.window.active_view()
 
         def done(index):
@@ -372,7 +372,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         settings = self.view.settings()
 
         name, type, key = self.split_key_path(key_path)
-        key_value = pref_editor.get_pref_rec(name, key)[1]
+        key_value = pref_editor.getPreferencesPathAndValue(name, key)[1]
         view_specific = settings.has(key) and settings.get(key) != key_value['value']
 
         CURRENT = None
@@ -485,7 +485,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         name, type, key = self.split_key_path(key_path)
 
         settings = self.view.settings()
-        key_value = pref_editor.get_pref_rec(name, key)[1]
+        key_value = pref_editor.getPreferencesPathAndValue(name, key)[1]
         view_specific = settings.has(key) and settings.get(key) != key_value['value']
 
         CURRENT = None
@@ -527,7 +527,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         view.set_status("preferences_editor", "Set %s" % key_path)
 
         settings = view.settings()
-        key_value = pref_editor.get_pref_rec(name, key)[1]
+        key_value = pref_editor.getPreferencesPathAndValue(name, key)[1]
         view_specific = settings.has(key) and settings.get(key) != key_value['value']
 
         CURRENT = None
@@ -617,7 +617,16 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             return key, value
 
 
-    def get_pref_rec(self, name, key):
+    def getPreferencesPathAndValue(self, name, key):
+        """
+            @key    the name of the setting
+            @name   the name of the setting's file on self.preferences[name]
+
+            @return key_path, key_value:
+
+                    key_path:  Default/wrap_width
+                    key_value: {'value': True, 'description': 'No help available :('}
+        """
         platform = self.platform
 
         if name == 'This View':
@@ -765,7 +774,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
         spec = self.get_spec(name, key)
         meta = self.get_meta(name, key, spec)
-        rec  = self.get_pref_rec(name, key)[1]
+        rec  = self.getPreferencesPathAndValue(name, key)[1]
 
         widget      = meta.get('widget', 'input')
         validate    = meta.get('validate', 'str')
@@ -899,7 +908,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                     if name == current_syntax: continue
 
                 for key in sorted(self.get_pref_keys(name)):
-                    key_path, key_value = self.get_pref_rec(name, key)
+                    key_path, key_value = self.getPreferencesPathAndValue(name, key)
                     options.append( [ key_path, sublime.encode_value(key_value.get('value'), False) ] )
                     option_data.append( self.get_spec(name, key) )
 
@@ -907,7 +916,10 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             self.settings_indicate_name = False
 
             for key in sorted(self.get_pref_keys(name)):
-                key_path, key_value = self.get_pref_rec(name, key)
+                key_path, key_value = self.getPreferencesPathAndValue(name, key)
+
+                # print( 'key_path:  ' + str( key_path ) )
+                # print( 'key_value: ' + str( key_value ) )
                 options.append( [ key_path, sublime.encode_value(key_value.get('value'), False) ] )
                 option_data.append( self.get_spec(name, key) )
 
