@@ -606,7 +606,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         if self.settings_indicate_type and self.settings_indicate_name:
             return "%s/%s/%s" % (name, type, key), value
         elif self.settings_indicate_type:
-            return "%s/%s" % (name, type, key), value
+            return "%s/%s" % (type, key), value
         elif self.settings_indicate_name:
             return "%s/%s" % (name, key), value
         else:
