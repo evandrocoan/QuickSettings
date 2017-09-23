@@ -625,10 +625,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                 {'value': self.view.settings().get(key)})
 
         pref = self.preferences[name]
-
         type = "user_%s" % platform
-
-        indicate_type = self.view.settings().get('preferences_editor_indicate_default_settings')
 
         if type in pref:
             if key in pref[type]:
