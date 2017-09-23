@@ -7,13 +7,13 @@
 	"meta.font_options": {
 		"widget": "multiselect",
 		"args": { "values": [
-			{ "caption": "No Bold", "value": "no_bold" }, 
-			{ "caption": "No Italic", "value": "no_italic" }, 
-			{ "caption": "No Antialias", "value": "no_antialias" }, 
+			{ "caption": "No Bold", "value": "no_bold" },
+			{ "caption": "No Italic", "value": "no_italic" },
+			{ "caption": "No Antialias", "value": "no_antialias" },
 			{ "caption": "Gray Antialias", "value": "gray_antialias" },
-			{ "caption": "Subpixel Antialias", "value": "subpixel_antialias" }, 
-			{ "caption": "No Round (OS X only)", "value": "no_round" }, 
-			{ "caption": "GDI (Windows only)", "value": "gdi" }, 
+			{ "caption": "Subpixel Antialias", "value": "subpixel_antialias" },
+			{ "caption": "No Round (OS X only)", "value": "no_round" },
+			{ "caption": "GDI (Windows only)", "value": "gdi" },
 			{ "caption": "Direct Write (Windwos only)", "value": "directwrite" }
 			]
 		}
@@ -51,9 +51,9 @@
 
 	"meta.default_line_endings": {
 		"widget": "select",
-		"args": { "values": [ 
-			{"caption": "System", "value": "system"}, 
-			{"caption": "Windows (CRLF)", "value": "windows"}, 
+		"args": { "values": [
+			{"caption": "System", "value": "system"},
+			{"caption": "Windows (CRLF)", "value": "windows"},
 			{"caption": "UNIX (LF)", "value": "unix"}
 		]},
 		"validate": "str"
@@ -78,7 +78,7 @@
 
 	"meta.ignored_packages": {
 		"widget": "select",
-		"args": { "values": [ 
+		"args": { "values": [
 			{"caption": "Enable Package", "command": "enable_package"},
 			{"caption": "Disable Package", "command": "disable_package"}
 		]}
@@ -95,7 +95,7 @@
 	// This adds "/Default/" or "/User/" in preferences path.
 	//
 	// This enables you to easily find your custom settings.
-	"preferences_editor_indicate_default_settings": false,
+	"preferences_editor_indicate_default_settings": true,
 
 	// Log level
 	"preferences_editor_loglevel": "ERROR",
