@@ -250,28 +250,32 @@ def load_preferences():
             pref = prefs[name][type]
 
         #sys.stderr.write("name: %s, type: %s, syntax: %s\n" % (name, type, syntax))
-
-        new_data = {}
         data = sublime.load_resource(pref_file)
-        try:
-            #import spdb ; spdb.start()
-            d, data2 = get_descriptions(data)
-            #sys.stderr.write("data: %s\n" % data)
 
-            data = sublime.decode_value(data)
+        if data:
+            new_data = {}
 
-            for k,v in data.items():
-                if k not in d:
-                    new_data[k] = {"description": "No help available :("}
-                else:
-                    new_data[k] = d[k]
+            try:
+                #import spdb ; spdb.start()
+                d, data2 = get_descriptions(data)
+                #sys.stderr.write("data: %s\n" % data)
 
-                new_data[k]['value'] = v
+                data = sublime.decode_value(data)
 
-        except:
-            log.warning("Error reading %s (data is %s)", pref_file, data, exc_info=1)
+                for k,v in data.items():
 
-        pref.update(new_data)
+                    if k not in d:
+                        new_data[k] = {"description": "No help available :("}
+
+                    else:
+                        new_data[k] = d[k]
+
+                    new_data[k]['value'] = v
+
+            except:
+                log.warning("Error reading %s (data is %s)", pref_file, data, exc_info=1)
+
+            pref.update(new_data)
 
     return prefs
 
