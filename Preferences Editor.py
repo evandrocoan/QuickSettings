@@ -519,53 +519,41 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             'widget': 'input'
         }
 
-    def widget_select_bool(self, pref_editor, key_path, value=None, default=None, validate=None, preview=True):
-        # true_string = "True"
-
-        # true_flags = []
-        # if value is True:
-        #   true_flags
-
-        # if value is True:
-        #   true_string += " (current"
-        #   if default is True:
-        #       true_string += ", default"
-        #   true_string += ")"
-
+    def widget_select_bool(self, option, value=None, default=None, validate=None):
         options = ["BACK (Open the Last Menu)", "true", "false"]
+        view = self.window.active_view()
 
-        setting_name, type, key  = self.convertSettingPathToNameTypeAndKey(key_path)
-        key_path, key_value      = pref_editor.getPreferencesPathAndValue(setting_name, key)
-        view                     = pref_editor.window.active_view()
+        setting_file = option[0]
+        setting_name = option[1]
 
         def done(index):
+            log( 8, "widget_select_bool, done, index: " + str( index ) )
             view.erase_status("preferences_editor")
 
             if index < 0:
-                self.view.settings().set(key, key_value['value'])
                 return self.shutdown()
 
             elif index == 0:
-                self.view.settings().set(key, key_value['value'])
+                self.preferences_selector()
 
             elif index == 1:
-                pref_editor.set_setting_value(key_path, True, default)
+                self.set_setting_value(setting_file, setting_name, True)
 
             else:
-                pref_editor.set_setting_value(key_path, False, default)
+                self.set_setting_value(setting_file, setting_name, False)
 
             self.preferences_selector()
 
         def highlight(index):
 
             if index == 0:
-                self.view.settings().set(key, True)
+                self.view.settings().set(setting_name, True)
 
             else:
-                self.view.settings().set(key, False)
+                self.view.settings().set(setting_name, False)
 
         # for op in options: log( 2, "op: {0}".format( op ) )
-        view.set_status("preferences_editor", "Set %s" % key_path)
+        view.set_status("preferences_editor", "Set %s" % (setting_file + '/' + setting_name))
         show_quick_panel(view, options, done, highlight)
 
     def widget_select(self, pref_editor, key_path, value=None, default=None, validate=None, values=[]):
@@ -761,6 +749,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                 sublime.error_message("Invalid Value: %s" % e)
 
             view.erase_status("preferences_editor")
+            self.preferences_selector()
 
         def change(value):
 
@@ -774,6 +763,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
         def cancel():
             view.erase_status("preferences_editor")
+            self.preferences_selector()
 
         view.set_status("preferences_editor", "Set %s" % (setting_file + '/' + setting_name))
         show_input(self.view, setting_name, value, done, change, cancel)
@@ -944,11 +934,9 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                 self.shutdown()
                 self.window.run_command("edit_preferences")
 
-            # When it is the main panel, the indexes are not shifted by 1
             elif self.is_main_panel:
                 self.window.run_command("edit_preferences", {"setting_file": options_names[index][0]})
 
-            # When it is not the main panel, the indexes are shifted by 1
             else:
                 self.index = index
                 self.change_value(options_paths, index)
