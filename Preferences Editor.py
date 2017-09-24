@@ -1,7 +1,10 @@
+#!/usr/bin/env python3
+# -*- coding: UTF-8 -*-
 
 import os
 import re
 import sys
+
 import pprint
 
 import sublime
@@ -19,22 +22,31 @@ def assert_path(module):
 assert_path( os.path.join( os.path.dirname( os.path.dirname( os.path.realpath( __file__ ) ) ), 'PythonDebugTools' ) )
 
 # Import the debugger
-from debug_tools import Debugger
+import debug_tools
+import imp
+imp.reload( debug_tools )
+import debug_tools
+
+import ast
+import json
 
 # Enable debug messages: (bitwise)
 #
-# 0   - Disabled debugging.
-# 1   - Basic logging messages.
-# 2   - AgentPlayer       class' notices.
-# 4   - StickIntelligence class' notices.
+# 0   - Disabled debugging
+# 1   - Error logging messages
+# 2   - Settings loading notices
+# 4   - Settings loading file contents
+# 8   - Quick panel selection.
 #
 # 127 - All debugging levels at the same time.
-log = Debugger( 127, "PreferencesEditor", "DebugLog.txt" )
+log = debug_tools.Debugger( 9, "Debug", "DebugLog.txt" )
 
 log.clear_log_file()
 log( 1, "Debugging" )
 log( 1, "..." )
 log( 1, "..." )
+
+default_preferences_file = 'Default|Preferences'
 
 standard_settings_names = ( "Distraction Free", "Current Syntax", "Current Project", "This View" )
 standard_settings_types = ('default', 'default_'+sublime.platform())
@@ -46,32 +58,22 @@ def show_quick_panel(view, options, done, highlighted=None):
 
 def json_list(x):
 
-    try:
-        d = sublime.decode_value(x)
-        #sys.stderr.write("d: %s\n" % d)
-
-    except Exception as e:
-        log( 1, "cannot decode %s", repr(x), exc_info=1 )
-        raise ValueError(str(e))
-
     if not isinstance(d, list):
         raise ValueError("Expected a JSON list")
+
+    d = sublime.decode_value(x)
+    #sys.stderr.write("d: %s\n" % d)
 
     return d
 
 
 def json_dict(x):
 
-    try:
-        d = sublime.decode_value(x)
-        #sys.stderr.write("d: %s\n" % d)
-
-    except Exception as e:
-        log(1, "cannot decode %s", repr(x), exc_info=1)
-        raise ValueError(str(e))
-
     if not isinstance(d, dict):
         raise ValueError("Expected a JSON dictionary")
+
+    d = sublime.decode_value(x)
+    #sys.stderr.write("d: %s\n" % d)
 
     return d
 
@@ -198,7 +200,7 @@ def get_current_syntax(view, syntax=None):
 
     elif settings.has('syntax'):
         current_syntax = settings.get('syntax')
-        current_syntax = os.path.basename(current_syntax).rsplit('.', 1)[0]
+        current_syntax = current_syntax.replace("Packages/", "").replace("/", "|").rsplit('.', 1)[0]
 
     return current_syntax
 
@@ -224,7 +226,7 @@ def save_preference(view, setting_name, key, value):
         view.window().set_project_data(data)
         return
 
-    setting_name = os.path.basename(setting_name)
+    setting_name = os.path.basename(setting_name.replace("|", "/"))
 
     log( 2, "save__preference, setting_name: " + setting_name )
     settings = sublime.load_settings(setting_name+'.sublime-settings')
@@ -236,23 +238,13 @@ def save_preference(view, setting_name, key, value):
 def load_preferences():
     log( 2, "load__preferences" )
 
-    # for syntax specific, we need syntax names
-    language_files = sublime.find_resources("*.tmLanguage")
-    syntax_names = []
-
-    for f in language_files:
-        syntax_name = os.path.basename(f).rsplit('.', 1)[0]
-
-        log( 2, "load__preferences, syntax_name: " + syntax_name )
-        syntax_names.append( syntax_name )
-
     preferences = {}
     preferences_files = sublime.find_resources("*.sublime-settings")
 
     for preference_file in preferences_files:
 
         log( 2, "load__preferences, preference_file: {0}".format( preference_file ) )
-        preference_name = preference_file.replace("Packages/", "").rsplit('.', 1)[0]
+        preference_name = preference_file.replace("Packages/", "").replace("/", "|").rsplit('.', 1)[0]
 
         log( 2, "load__preferences, preference_name: {0}".format( preference_name ) )
         platform = "any"
@@ -272,39 +264,24 @@ def load_preferences():
         log( 2, "load__preferences, preference_name: {0}".format( preference_name ) )
 
         if "/User/" in preference_file:
-            type = "user"
+            setting_type = "user"
 
         else:
-            type = "default"
+            setting_type = "default"
 
         if platform != "any":
-            type = type+"_"+platform
+            setting_type = setting_type+"_"+platform
 
         if preference_name not in preferences:
             preferences[preference_name] = {}
 
-        syntax = None
+        if setting_type not in preferences[preference_name]:
+            preferences[preference_name][setting_type] = {}
 
-        if 0 and preference_name in syntax_names:
-            type = "syntax_"+type
-            syntax = preference_name
-            preference_name = "Preferences"
+        #sys.stderr.write("preference_name: %s, setting_type: %s\n" % (preference_name, setting_type))
+        preference = preferences[preference_name][setting_type]
 
-            if type not in preferences[preference_name]:
-                preferences[preference_name][type] = {}
-
-            if syntax not in preferences[preference_name][type]:
-                preferences[preference_name][type][syntax] = {}
-
-            preference = preferences[preference_name][type][syntax]
-
-        else:
-            if type not in preferences[preference_name]:
-                preferences[preference_name][type] = {}
-
-            preference = preferences[preference_name][type]
-
-        #sys.stderr.write("preference_name: %s, type: %s, syntax: %s\n" % (preference_name, type, syntax))
+        log( 2, "preference: " + str( preference ) )
         preference_data = sublime.load_resource(preference_file)
 
         if preference_data:
@@ -332,33 +309,14 @@ def load_preferences():
 
             preference.update(preference_settings)
 
+    # log( 2, "SHIT: " + preferences.encode('utf8') )
+
+    # for shit in preferences:
+    #     log( 2, "isinstance(" + str( shit ) + ", str):  " + str( isinstance(shit, str) ) )
+    #     log( 2, "isinstance(" + str( shit ) + ", dict): " + str( isinstance(shit, dict) ) )
+    #     log( 2, "shit: " + pprint.pformat( preferences[shit] ) )
+
     return preferences
-
-
-def load_syntax_names(get_specials=False):
-    language_files = sublime.find_resources("*.tmLanguage")
-    syntax_names = []
-
-    reStructuredText_syntax = None
-    plaintext_syntax = None
-
-    for f in language_files:
-
-        if "restructuredtext" in f.lower():
-            reStructuredText_syntax = f
-
-        if "plain text" in f.lower():
-            plaintext_syntax = f
-
-        syntax_names.append(os.path.basename(f).rsplit('.', 1)[0])
-
-    #sys.stderr.write("plain text syntax: %s\n" % plaintext_syntax)
-    #sys.stderr.write("reST syntax: %s\n" % reStructuredText_syntax)
-
-    if get_specials:
-        return syntax_names, plaintext_syntax, reStructuredText_syntax
-
-    return syntax_names
 
 
 # commands are
@@ -378,310 +336,15 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
     # }
     #
 
-    #def bool_widget(self, ):
+    def set_setting_value(self, setting_file, setting_name, value):
 
-    def widget_select_bool(self, pref_editor, key_path, value=None, default=None, validate=None, preview=True):
-        # true_string = "True"
+        if setting_file == "Current Syntax":
+            setting_file = self.current_syntax
 
-        # true_flags = []
-        # if value is True:
-        #   true_flags
+        save_preference(self.view, setting_file, setting_name, value)
+        self.options_names[self.index][1] = sublime.encode_value(value, False)
 
-        # if value is True:
-        #   true_string += " (current"
-        #   if default is True:
-        #       true_string += ", default"
-        #   true_string += ")"
-
-        options = ["BACK (Open the Last Menu)", "true", "false"]
-
-        setting_name, type, key  = self.convertSettingPathToNameTypeAndKey(key_path)
-        key_path, key_value      = pref_editor.getPreferencesPathAndValue(setting_name, key)
-        view                     = pref_editor.window.active_view()
-
-        def done(index):
-            view.erase_status("preferences_editor")
-
-            if index < 0:
-                self.view.settings().set(key, key_value['value'])
-                return self.shutdown()
-
-            elif index == 0:
-                self.view.settings().set(key, key_value['value'])
-
-            elif index == 1:
-                pref_editor.set_pref_value(key_path, True, default)
-
-            else:
-                pref_editor.set_pref_value(key_path, False, default)
-
-            self.preferences_selector()
-
-        def highlight(index):
-
-            if index == 0:
-                self.view.settings().set(key, True)
-
-            else:
-                self.view.settings().set(key, False)
-
-        # for op in options: log( 2, "op: {0}".format( op ) )
-        view.set_status("preferences_editor", "Set %s" % key_path)
-        show_quick_panel(view, options, done, highlight)
-
-    def widget_select(self, pref_editor, key_path, value=None, default=None, validate=None, values=[]):
-        settings = self.view.settings()
-
-        setting_name, type, key = self.convertSettingPathToNameTypeAndKey(key_path)
-        key_value = pref_editor.getPreferencesPathAndValue(setting_name, key)[1]
-        view_specific = settings.has(key) and settings.get(key) != key_value['value']
-
-        CURRENT = None
-
-        if settings.has(key):
-            CURRENT = settings.get(key)
-
-        commands = None
-
-        if isinstance(values[0], dict):
-            options = [ x['caption'] for x in values ]
-            commands = [ x.get('command') for x in values ]
-            args = [ x.get('args', {}) for x in values ]
-            types = [ x.get('type', 'window') for x in values ]
-            values = [ x.get('value') for x in values ]
-
-        else:
-            options = [ str(x) for x in values ]
-
-        view = pref_editor.window.active_view()
-
-        def done(index):
-            view.erase_status("preferences_editor")
-
-            if view_specific:
-                self.view.settings().set(key, CURRENT)
-
-            else:
-                self.view.settings().erase(key)
-
-            if index < 0:
-                return self.shutdown()
-
-            # if command is set, let the command handle this preference
-            if commands:
-
-                if commands[index]:
-                    context = view
-
-                    if types[index] == "window":
-                        context = view.window()
-
-                    sublime.set_timeout(lambda: context.run_command(commands[index], args[index]), 10)
-                    return
-
-            pref_editor.set_pref_value(key_path, values[index], default)
-
-        def highlight(index):
-            log(1, "setting %s to %s", key, values[index])
-            settings.set(key, values[index])
-
-        view.set_status("preferences_editor", "Set %s" % key_path)
-        show_quick_panel(view, options, done, highlight)
-
-    def widget_multiselect(self, pref_editor, key_path, value=None, default=None, validate=None, values=None):
-        view = pref_editor.window.active_view()
-
-        if isinstance(values[0], str):
-            values = [ dict(caption=v, value=v) for v in values ]
-
-        other = []
-
-        def do_add_option():
-            options = [ v.get('caption', str(v.get('value')))
-                for v in values if v['value'] not in value ]
-
-            def done(index):
-
-                if index < 0: return self.shutdown()
-                value.append(other[index])
-                do_show_panel()
-
-            show_quick_panel(view, options, done)
-
-        def do_remove_option():
-            options = \
-            [
-                v.get('caption', str(v.get('value')))
-                for v in values if v['value'] in value
-            ]
-
-            def done(index):
-
-                if index < 0:
-                    return self.shutdown()
-
-                value.remove(value[index])
-                do_show_panel()
-
-            show_quick_panel(view, options, done)
-
-
-        def do_show_panel():
-            other[:] = [ v['value'] for v in values if v['value'] not in value ]
-
-            options = \
-            [
-                ["Set Value", sublime.encode_value(value, False)],
-                ["Add Option", "From: "+sublime.encode_value(other, False)],
-                ["Remove Option", "From:"+sublime.encode_value(value, False)]
-            ]
-
-            def done(index):
-                view.erase_status("preferences_editor")
-
-                if index < 0:
-                    return self.shutdown()
-
-                if index == 0:
-                    pref_editor.set_pref_value(key_path, value, default)
-
-                if index == 1:
-                    do_add_option()
-
-                if index == 2:
-                    do_remove_option()
-
-            view.set_status("preferences_editor", "Set %s" % key_path)
-            show_quick_panel(view, options, done)
-
-        do_show_panel()
-
-    def widget_select_resource(self, pref_editor, key_path, value=None, default=None, validate=None,
-                               find_resources="", strip_path=True, strip_suffix=True):
-
-        resources = sublime.find_resources(find_resources)
-        setting_name, type, key = self.convertSettingPathToNameTypeAndKey(key_path)
-
-        settings = self.view.settings()
-        key_value = pref_editor.getPreferencesPathAndValue(setting_name, key)[1]
-        view_specific = settings.has(key) and settings.get(key) != key_value['value']
-
-        CURRENT = None
-
-        if settings.has(key):
-            CURRENT = settings.get(key)
-
-        options = resources
-
-        if strip_path:
-            options = [ os.path.basename(r) for r in options ]
-
-        if strip_suffix:
-            options = [ os.path.splitext(r)[0] for r in options ]
-
-        view = pref_editor.window.active_view()
-
-        def done(index):
-            view.erase_status("preferences_editor")
-
-            if view_specific:
-                settings.set(key, CURRENT)
-
-            else:
-                settings.erase(key)
-
-            if index < 0:
-                return self.shutdown()
-
-            pref_editor.set_pref_value(key_path, resources[index], default)
-
-        def highlight(index):
-            log(1, "setting %s to %s", key, resources[index])
-            settings.set(key, resources[index])
-
-        view.set_status("preferences_editor", "Set %s" % key_path)
-        show_quick_panel(view, options, done, highlight)
-
-
-    def widget_input(self, pref_editor, key_path, value=None, default=None, validate=None):
-        setting_name, type, key = self.convertSettingPathToNameTypeAndKey(key_path)
-
-        view = self.view
-        view.set_status("preferences_editor", "Set %s" % key_path)
-
-        settings = view.settings()
-        key_value = pref_editor.getPreferencesPathAndValue(setting_name, key)[1]
-        view_specific = settings.has(key) and settings.get(key) != key_value['value']
-
-        CURRENT = None
-
-        if settings.has(key):
-            CURRENT = settings.get(key)
-
-        def _undo_view_settings():
-
-            if view_specific:
-                settings.set(key, CURRENT)
-
-            else:
-                settings.erase(key)
-
-        def done(value):
-            _undo_view_settings()
-
-            try:
-                value = validate(value)
-                pref_editor.set_pref_value(key_path, value, default)
-
-            except ValueError as e:
-                sublime.error_message("Invalid Value: %s" % e)
-
-            view.erase_status("preferences_editor")
-
-        def change(value):
-
-            try:
-                v = validate(value)
-                view.settings().set(key, v)
-                log(1, "set %s to %s", key, v)
-
-            except ValueError as e:
-                sublime.status_message("Invalid Value: %s" % e)
-
-        def cancel():
-            _undo_view_settings()
-            view.erase_status("preferences_editor")
-
-        view.set_status("preferences_editor", "Set %s" % key_path)
-        show_input(self.view, key, value, done, change, cancel)
-
-
-    def convertSettingPathToNameTypeAndKey(self, key_path):
-        setting_name = self.setting_name
-        type = "User"
-
-        if key_path.count('/') == 2:
-            setting_name, type, key = key_path.split('/')
-
-        elif key_path.count('/') == 1:
-            setting_name, key = key_path.split('/')
-
-        else:
-            key = key_path
-
-        return setting_name, type, key
-
-
-    def set_pref_value(self, key_path, value, default=None):
-        setting_name, type, key = self.convertSettingPathToNameTypeAndKey(key_path)
-
-        if setting_name == "Current Syntax":
-            setting_name = self.current_syntax
-
-        save_preference(self.view, setting_name, key, value, default=default, type=type)
-        self.options[self.index][1] = sublime.encode_value(value, False)
-
-        #settings = sublime.load_settings(setting_name+'.sublime-settings')
+        #settings = sublime.load_settings(setting_file+'.sublime-settings')
         #settings.set()
 
         #
@@ -696,124 +359,59 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         # settings.set('ignored_packages', ignored)
         # sublime.save_settings(preferences_filename())
 
+    def make_pref_rec(self, setting_file, setting_type, setting_name, value):
+        return "%s/%s/%s" % (setting_file, setting_type, setting_name), value
 
-    def make_pref_rec(self, setting_name, type, key, value):
-        if self.settings_indicate_type and self.settings_indicate_name:
-            return "%s/%s/%s" % (setting_name, type, key), value
-
-        elif self.settings_indicate_type:
-            return "%s/%s" % (type, key), value
-
-        elif self.settings_indicate_name:
-            return "%s/%s" % (setting_name, key), value
-
-        else:
-            return key, value
-
-
-    def getPreferencesPathAndValue(self, setting_name, key):
+    def getUserValueAndDescription(self, setting_file, setting_name):
         """
-            @key    the setting_name of the setting
-            @setting_name   the setting_name of the setting's file on self.preferences[setting_name]
+            @setting_name   the name of the setting
+            @setting_file   the name of the setting's file on self.setting_files[setting_file]
 
             @return key_path, key_value:
 
-                    key_path:  Default/wrap_width
+                    key_path:  Default/wrap_width (deprecated)
                     key_value: {'value': True, 'description': 'No help available :('}
         """
-        platform = self.platform
+        platform = sublime.platform()
+        settings = [ self.setting_files[setting_file], self.get_default_setting_names(setting_file) ]
 
-        if setting_name == 'This View':
-            return self.make_pref_rec(setting_name, "View", key, {'value': self.view.settings().get(key)})
+        setting_types = \
+        [
+            "user_%s" % platform,
+            "user",
+            "default_%s" % platform,
+            "default",
+        ]
 
-        pref = self.preferences[setting_name]
-        type = "user_%s" % platform
+        for setting in settings:
 
-        if type in pref:
+            for setting_type in setting_types:
 
-            if key in pref[type]:
-                return self.make_pref_rec(setting_name, "User", key, pref[type][key])
+                if setting_type in setting:
 
-        type = "user"
+                    if setting_name in setting[setting_type]:
+                        return setting[setting_type][setting_name]
 
-        if type in pref:
+        return {'value': None, 'description': 'No help available :('}
 
-            if key in pref[type]:
-                return self.make_pref_rec(setting_name, "User", key, pref[type][key])
-
-        if setting_name == 'Current Project':
-            data = self.view.window().project_data()
-            settings = data.get('settings', {})
-
-            if key in settings:
-                return self.make_pref_rec(setting_name, "Project", key, {'value': settings[key]})
-
-        type = "default_%s" % platform
-
-        if type in pref:
-
-            if key in pref[type]:
-                return self.make_pref_rec(setting_name, "Default", key, pref[type][key])
-
-        type = "default"
-
-        if type in pref:
-
-            if key in pref[type]:
-                return self.make_pref_rec(setting_name, "Default", key, pref[type][key])
-
-        pref = self.get_pref_defaults(setting_name)
-
-        if setting_name != 'Current Project':
-
-            type = "user_%s" % platform
-
-            if type in pref:
-
-                if key in pref[type]:
-                    return self.make_pref_rec(setting_name, "Default", key, pref[type][key])
-
-            type = "user"
-
-            if type in pref:
-
-                if key in pref[type]:
-                    return self.make_pref_rec(setting_name, "Default", key, pref[type][key])
-
-        type = "default_%s" % platform
-
-        if type in pref:
-
-            if key in pref[type]:
-                return self.make_pref_rec(setting_name, "Default", key, pref[type][key])
-
-        type = "default"
-
-        if type in pref:
-
-            if key in pref[type]:
-                return self.make_pref_rec(setting_name, "Default", key, pref[type][key])
-
-        if self.settings_indicate_name:
-            return "%s/%s" % (setting_name, key), {'value': None, 'description': 'No help available :('}
-
-        else:
-            return key, {'value': None, 'description': 'No help available :('}
-
-
-    def get_pref_defaults(self, setting_name):
-        pref_default = {'default': {}, 'default_'+sublime.platform(): {}}
+    def get_default_setting_names(self, setting_name):
+        pref_default = None
 
         if self.is_preferences(setting_name):
-            pref_default = self.preferences['Preferences']
+            pref_default = self.setting_files[default_preferences_file]
+
+        else:
+            pref_default = {'default': {}, 'default_'+sublime.platform(): {}}
 
         return pref_default
 
-    def get_pref_keys(self, setting_name):
-        pref = self.preferences[setting_name]
+    def get_setting_names(self, setting_name):
+        setting = self.setting_files[setting_name]
+        # log( 2, "get__setting_names, setting:      " + str( setting ) )
+        # log( 2, "get__setting_names, setting type: " + str( type( setting ) ) )
 
         if self.is_preferences(setting_name):
-            pref_default = self.preferences['Preferences']
+            pref_default = self.setting_files[default_preferences_file]
 
         else:
             pref_default = {'default': {}, 'default_'+sublime.platform(): {}}
@@ -822,7 +420,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         (
             [ x
                 for y in standard_settings_types
-                for x in pref.get(y, {}).keys()
+                for x in setting.get(y, {}).keys()
             ] +
             [ x
                 for y in standard_settings_types
@@ -830,85 +428,82 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             ]
         )
 
-    def is_preferences(self, setting_name):
-        return setting_name in self.syntax_names or setting_name in standard_settings_names
+    def is_preferences(self, setting_file):
+        return setting_file in standard_settings_names
 
-    def getDefaultValueAndDescription(self, setting_name, key):
+    def getDefaultValueAndDescription(self, setting_file, setting_name):
         """
-        @setting_name  the setting_name of the setting file setting_name on self.preferences
-        @key           the setting_name of the setting
+        @setting_file  the name of the setting file name on self.setting_files
+        @setting_name  the name of the setting
 
-        get_DefaultValueAndDescription, setting_name: Preferences
-        get_DefaultValueAndDescription, key:  word_wrap
+            setting_file: Preferences
+            setting_name: word_wrap
 
-        get_DefaultValueAndDescription, setting_name: Preferences
-        get_DefaultValueAndDescription, key:  wrap_width
+            setting_file: Default
+            setting_name: adaptive_dividers
 
-        get_DefaultValueAndDescription, setting_name: Default
-        get_DefaultValueAndDescription, key:  adaptive_dividers
-
-        @return a dictionary with the keys `value` and `description` for the given setting file and setting setting_name.
+        @return a dictionary with the keys `value` and `description` for the given setting file and setting name.
 
         {'value': 0, 'description': 'Set to a value other than 0 to force wrapping at that column rather than the\nwindow width\n'}
         {'value': './\\()"\'-:,.;<>~!@#$%^&*|+=[]{}`~?', 'description': 'Characters that are considered to separate words\n'}
         """
-        pref = self.preferences[setting_name]
+        setting = self.setting_files[setting_file]
 
-        for k in 'default', 'default_'+self.platform:
+        for item in 'default', 'default_'+sublime.platform():
 
-            if key in pref.get(k, {}):
-                return pref[k][key]
+            if setting_name in setting.get(item, {}):
+                return setting[item][setting_name]
 
-        if self.is_preferences(setting_name):
-            return self.getDefaultValueAndDescription('Preferences', key)
+        if self.is_preferences(setting_file):
+            return self.getDefaultValueAndDescription(default_preferences_file, setting_name)
 
         return None
 
-    def get_meta(self, setting_name, key, spec):
+    def getSettingMetadata(self, setting_file, setting_name, defaultValueAndDescription):
         """
-            @setting_name  the setting_name of the setting file setting_name on self.preferences
-            @key           the setting_name of the setting
-            @spec          a dictionary with the keys `value` and `description` for the given setting file and setting setting_name.
-                           {'value': 0, 'description': 'Set to a value other than 0 to force wrapping'}
-
+            @setting_file                  the name of the setting file name on self.setting_files
+            @setting_name                  the name of the setting
+            @defaultValueAndDescription    a dictionary with the keys `value` and `description` for
+                                            the given setting file and setting setting_file.
+                                            {'value': 0, 'description': 'Set to a value other than 0 to force wrapping'}
             @return
         """
-        meta = self.getDefaultValueAndDescription(setting_name, "meta."+key)
+        meta = self.getDefaultValueAndDescription(setting_file, "meta."+setting_name)
 
         #sys.stderr.write("meta: %s\n" % meta)
         if meta:
             return meta.get('value')
 
-        val = spec.get('value')
+        setting_value = defaultValueAndDescription.get('value')
 
-        if isinstance(val, bool):
+        if isinstance(setting_value, bool):
             return \
             {
                 'widget': 'select_bool'
             }
 
-        if isinstance(val, float):
+        if isinstance(setting_value, float):
             return \
             {
                 'widget':   'input',
                 'validate': 'float',
             }
 
-        if isinstance(val, int):
+        if isinstance(setting_value, int):
             return \
             {
                 'widget':   'input',
                 'validate': 'int',
             }
 
-        if isinstance(val, list):
+        if isinstance(setting_value, list):
             return \
             {
                 'widget':   'input',
                 'validate': 'json_list'
             }
 
-        if isinstance(val, dict):
+        if isinstance(setting_value, dict):
             return \
             {
                 'widget':   'input',
@@ -920,30 +515,31 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             'widget': 'input'
         }
 
+    def run_widget(self, option):
+        log( 2, "run__widget, option: " + str( option ) )
 
-    def run_widget(self, key_path):
-        log( 2, "run_widget, key_path: " + str( key_path ) )
-        setting_name, type, key = self.convertSettingPathToNameTypeAndKey(key_path)
+        setting_file = option[0]
+        setting_name = option[1]
 
-        log( 2, "run_widget, setting_name: " + str( setting_name ) )
-        log( 2, "run_widget, type: " + str( type ) )
-        log( 2, "run_widget, key:  " + str( key ) )
+        log( 2, "run__widget, setting_file: " + str( setting_file ) )
+        log( 2, "run__widget, setting_name: " + str( setting_name ) )
 
-        #import spdb ; spdb.start()
+        defaultValueAndDescription = self.getDefaultValueAndDescription(setting_file, setting_name)
+        log( 2, "run__widget, defaultValueAndDescription: " + str( settingMetadata ) )
 
-        spec = self.getDefaultValueAndDescription(setting_name, key)
-        meta = self.get_meta(setting_name, key, spec)
-        rec  = self.getPreferencesPathAndValue(setting_name, key)[1]
+        settingMetadata = self.getSettingMetadata(setting_file, setting_name, defaultValueAndDescription)
+        log( 2, "run__widget, settingMetadata: " + str( settingMetadata ) )
 
-        log( 2, "run_widget, meta:   " + str( meta ) )
+        userValueAndDescription = self.getUserValueAndDescription(setting_file, setting_name)
+        log( 2, "run__widget, userValueAndDescription: " + str( settingMetadata ) )
 
-        widget      = meta.get('widget', 'input')
-        validate    = meta.get('validate', 'str')
-        args        = meta.get('args', {})
+        widget   = settingMetadata.get('widget', 'input')
+        validate = settingMetadata.get('validate', 'str')
+        args     = settingMetadata.get('args', {})
 
-        log( 2, "run_widget, widget:   " + str( widget ) )
-        log( 2, "run_widget, validate: " + str( validate ) )
-        log( 2, "run_widget, args:     " + str( args ) )
+        log( 2, "run__widget, widget:   " + str( widget ) )
+        log( 2, "run__widget, validate: " + str( validate ) )
+        log( 2, "run__widget, args:     " + str( args ) )
 
         if isinstance(validate, list):
             validate_in_list = validate
@@ -964,26 +560,20 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         if hasattr(self, "widget_"+widget):
             widget_func = getattr(self, "widget_"+widget)
 
-        widget_func(self, key_path, value=rec.get('value'), default=spec.get('value'), validate=validate, **args)
+        widget_func(self, key_path, value=userValueAndDescription.get('value'),
+                    default=defaultValueAndDescription.get('value'), validate=validate, **args)
 
     def change_value(self, options, index):
-        key_path = options[index][0]
-        log( 2, "change__value, key_path: " + str( key_path ) )
+        setting_file = options[index][0]
+        setting_name = options[index][1]
 
-        setting_name, type, key = self.convertSettingPathToNameTypeAndKey(key_path)
-
-        log( 2, "change__value, setting_name: " + str( setting_name ) )
-        log( 2, "change__value, type: " + str( type ) )
-        log( 2, "change__value, key:  " + str( key ) )
+        log( 2, "change__value, setting_file: " + str( setting_file ) )
+        log( 2, "change__value, setting_name:  " + str( setting_name ) )
 
         options = \
         [
             [ "Change Value", "" ],
         ]
-
-        if key_path.startswith("Preferences/"):
-            syntax = self.window.active_view().settings().get('syntax')
-            syntax = os.path.splitext(os.path.basename(syntax))[0]
 
     #       options = [
     #           [ "Set for anything", ""]
@@ -994,24 +584,19 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
     #           [ "Set for Linux only", ""]
     #       ]
 
-        spec = self.getDefaultValueAndDescription(setting_name, key)
+        spec = self.getDefaultValueAndDescription(setting_file, setting_name)
         view = self.window.active_view()
-
-        if view.settings().get('preferences_editor_dialog_reset_to_default', False):
-
-            if "/User/" in key_path:
-                options.append( [ "Reset to Default", str(spec.get('value')) ] )
 
         def done(index):
 
             if index == 0:  # change value
-                self.run_widget(key_path)
+                self.run_widget(options[index])
 
             if index == len(options)-1: # reset to default
-                self.set_pref_value(key_path, spec.get('value'), spec.get('value'))
+                self.set_setting_value(options[index], spec.get('value'), spec.get('value'))
 
         if len(options) == 1:
-            self.run_widget(key_path)
+            self.run_widget(options[index])
 
         else:
             show_quick_panel(self.window.active_view(), options, done)
@@ -1019,104 +604,76 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
     def shutdown(self):
         self.window.run_command("hide_panel", {"panel": "output.preferences_editor_help"})
 
-    def run(self, setting_name=None, platform=None, syntax=None):
+    def run(self, setting_file=None, syntax_name=None):
         r"""
-        :param syntax:
+        :param syntax_name:
             Name of syntax, you want to edit settings for
 
-        :param setting_name:
-            Name of settings, you want to edit.
-
-        :param platform:
-            One of OSX, Windows or Linux, for editing platform specific settings.
+        :param setting_file:
+            Name of settings' file, you want to edit.
         """
 
-        self.view        = self.window.active_view()
-        self.platform    = sublime.platform()
-        self.preferences = load_preferences()
+        self.view          = self.window.active_view()
+        self.setting_files = load_preferences()
 
-        loglevel       = self.view.settings().get('preferences_editor_loglevel', '0')
-        log._log_level = int( loglevel )
+        self.setting_file   = setting_file
+        self.current_syntax = get_current_syntax(self.view, syntax_name)
 
-        self.settings_indicate_name = True
-        self.settings_indicate_type = self.view.settings().get('preferences_editor_indicate_default_settings')
+        self.setting_files['This View'] = { 'default': {}, 'default_'+sublime.platform(): {} }
+        self.setting_files['Current Project'] = { 'default': {}, 'default_'+sublime.platform(): {} }
 
-        syntax_names, plaintext_syntax, reStructuredText_syntax = load_syntax_names(True)
-        self.syntax_names = syntax_names
+        options_names = []
+        options_paths = []
+        options_desciptions = []
 
-        for syntax in syntax_names:
+        options_names.insert( 0, [ "QUIT (Esc)", "End Edit Settings" ] )
+        options_desciptions.insert( 0, { "description": "You can press Esc, or select this option to end editing settings.\n" } )
 
-            if syntax not in self.preferences:
-                self.preferences[syntax] = { 'default': {}, 'default_'+sublime.platform(): {} }
-
-        self.preferences['Current Project'] = { 'default': {}, 'default_'+sublime.platform(): {} }
-
-        self.preferences['This View'] = { 'default': {}, 'default_'+sublime.platform(): {} }
-
-        current_syntax = get_current_syntax(self.view, syntax)
-        self.current_syntax = current_syntax
-
-        # for pref in self.preferences: log( 2, "pref: {0}".format( pref ) )
-        if self.current_syntax not in self.preferences:
-            self.preferences[self.current_syntax] = self.current_syntax
-
-        self.setting_name = setting_name
-        #import spdb ; spdb.start()
-
-        # https://bitbucket.org/klorenz/sublimepreferenceseditor/pull-requests/4
-        if self.current_syntax in self.preferences:
-            self.preferences['Current Syntax'] = self.preferences[self.current_syntax]
-
-        options = []
-        options_data = []
-
-        def process_keys():
-
-            for key in sorted(self.get_pref_keys(setting_name)):
-                log( 2, 'run, key:  ' + str( key ) )
-                log( 2, 'run, setting_name: ' + str( setting_name ) )
-                key_path, key_value = self.getPreferencesPathAndValue(setting_name, key)
-
-                log( 2, 'run, key_path:  ' + str( key_path ) )
-                log( 2, 'run, key_value: ' + str( key_value ) )
-                options.append( [ key_path, sublime.encode_value(key_value.get('value'), False) ] )
-
-                defaultValueAndDescription = self.getDefaultValueAndDescription(setting_name, key)
-                log( 2, "run, self.get_DefaultValueAndDescription(setting_name, key): " + str( defaultValueAndDescription ) )
-
-                options_data.append( defaultValueAndDescription )
-
-        if setting_name is None:
+        if setting_file is None:
+            # log( 2, "run, self.setting_files.keys(): " + json.dumps( self.setting_files.keys(), indent=4 ) )
             self.is_main_panel = True
 
-            options = \
-            [
-                ["Preferences", "General Settings"],
-                ["Distraction Free", "Preferences for Distraction Free Mode"],
-                ["Current Syntax", "%s-specific Preferences" % current_syntax],
-                ["Current Project", "Project-specific Preferences"],
-                ["This View", "Preferences for this View only"]
-            ]
+            # options_names = \
+            # [
+            #     ["Preferences", "General Settings"],
+            #     ["Distraction Free", "Preferences for Distraction Free Mode"],
+            #     ["Current Syntax", "%s-specific Preferences" % self.current_syntax],
+            #     ["Current Project", "Project-specific Preferences"],
+            #     ["This View", "Preferences for this View only"]
+            # ]
 
-            for setting_name in sorted(self.preferences.keys()):
-
-                if setting_name in syntax_names and setting_name != current_syntax: continue
-
-                if self.view.settings().get('preferences_editor_use_syntax_name', False):
-                    if setting_name == "Current Syntax": continue
-
-                else:
-                    if setting_name == current_syntax: continue
-
-                process_keys()
+            # for setting_file in sorted(self.setting_files.keys()):
+            for setting_file in self.setting_files.keys():
+                log( 2, 'run, setting_file: ' + str( setting_file ) )
+                options_names.append( [ setting_file, "Package Settings" ] )
 
         else:
-            self.is_main_panel          = False
-            self.settings_indicate_name = False
+            self.is_main_panel = False
+            log( 2, 'run, setting_file: ' + str( setting_file ) )
 
-            process_keys()
+            options_names.insert( 1, [ "BACK (Open the Main Menu)", "Choose another Setting to Edit" ] )
+            options_desciptions.insert( 1, { "description": "Select this option to take another setting to edit.\n" } )
 
-        #import spdb ; spdb.start()
+            # for setting_name in sorted(self.get_setting_names(setting_file)):
+            for setting_name in self.get_setting_names(setting_file):
+                log( 2, 'run, setting_name: ' + str( setting_name ) )
+
+                option_path = [setting_file, setting_name]
+                log( 2, 'run, option_path: ' + str( option_path ) )
+
+                options_paths.append( option_path )
+                userValueAndDescription = self.getUserValueAndDescription(setting_file, setting_name)
+
+                log( 4, 'run, userValueAndDescription: ', json.dumps( userValueAndDescription, indent=4 ) )
+                option_name = setting_file + '/' + setting_name
+
+                log( 2, 'run, option_name: ' + str( option_name ) )
+                options_names.append( [ option_name, sublime.encode_value( userValueAndDescription.get('value'), False ) ] )
+
+                defaultValueAndDescription = self.getDefaultValueAndDescription(setting_file, setting_name)
+                log( 4, "run, defaultValueAndDescription: ", json.dumps( defaultValueAndDescription, indent=4 ) )
+
+                options_desciptions.append( defaultValueAndDescription )
 
         help_view = self.window.create_output_panel("preferences_editor_help")
         help_view.settings().set('auto_indent', False)
@@ -1125,76 +682,42 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
         def on_highlighted(index):
             help_view.run_command("select_all")
-            description = options_data[index]['description']
 
-            if description.startswith("=\n"):
-                description = description[2:]
+            if index < len( options_desciptions ):
+                help_view.run_command("insert", {"characters": options_desciptions[index]['description']})
 
-                if reStructuredText_syntax:
-
-                    if help_view.settings().get('syntax') != reStructuredText_syntax:
-                        help_view.set_syntax_file(reStructuredText_syntax)
             else:
+                help_view.run_command("insert", {"characters": "Package Settings"})
 
-                if plaintext_syntax:
-
-                    if help_view.settings().get('syntax') != plaintext_syntax:
-                        help_view.set_syntax_file(plaintext_syntax)
-
-            help_view.run_command("insert", {"characters": description})
             help_view.show(0)
 
-
-           # preview = self.window.create_output_panel("unicode_preview")
-
-           #  settings = sublime.load_settings('Character Table.sublime-settings')
-           #  font_size = settings.get('font_size', 72)
-
-           #  preview.settings().set("font_size", font_size)
-           #  self.window.run_command("show_panel", {"panel": "output.unicode_preview"})
-
-           #  def on_highlighted(index):
-           #      char = UNICODE_DATA[index][0]
-           #      preview.run_command("select_all")
-           #      preview.run_command("insert", {"characters": char})
-
-           #  self.window.show_quick_panel(UNICODE_DATA, on_done,
-           #      sublime.MONOSPACE_FONT, -1, on_highlighted)
-
-        options.insert( 0, [ "QUIT (Esc)", "End Edit Settings" ] )
-        options_data.insert( 0, { "description": "You can press Esc, or select this option to end"
-                                 " editing settings.\n" } )
-
-        options.insert( 1, [ "BACK (Open the Main Menu)", "Choose another Setting to Edit" ] )
-        options_data.insert( 1, { "description": "Select this option to take another setting to edit.\n" } )
-
         def done(index):
+            log( 8, "run, done, index:              " + str( index ) )
+            log( 8, "run, done, self.is_main_panel: " + str( self.is_main_panel ) )
 
             if index < 0:
                 return self.shutdown()
 
             elif index == 0:
+                self.shutdown()
 
-                if self.is_main_panel:
-                    self.shutdown()
-
-                else:
-                    self.shutdown()
-                    self.window.run_command("edit_preferences")
+            elif index == 1 and not self.is_main_panel:
+                self.shutdown()
+                self.window.run_command("edit_preferences")
 
             # When it is the main panel, the indexes are not shifted by 1
             elif self.is_main_panel:
-                self.window.run_command("edit_preferences", {"setting_name": options[index][0]})
+                self.window.run_command("edit_preferences", {"setting_file": options_names[index][0]})
 
             # When it is not the main panel, the indexes are shifted by 1
             else:
                 self.index = index
-                self.change_value(self.options, index)
+                self.change_value(options_names, index)
 
-        # log( 2, pprint.pformat(options) )
+        log( 4, "run, options_names: " + json.dumps( options_names, indent=4 ) )
 
-        self.options = options
-        self.preferences_selector = lambda: show_quick_panel(self.view, self.options, done, on_highlighted)
+        self.options_names = options_names
+        self.preferences_selector = lambda: show_quick_panel(self.view, self.options_names, done, on_highlighted)
         self.preferences_selector()
 
 
