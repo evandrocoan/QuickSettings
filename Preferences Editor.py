@@ -39,7 +39,7 @@ import json
 # 8   - Quick panel selection.
 #
 # 127 - All debugging levels at the same time.
-log = debug_tools.Debugger( 9, "Debug", "DebugLog.txt" )
+log = debug_tools.Debugger( 127, "Debug", "DebugLog.txt" )
 
 log.clear_log_file()
 log( 1, "Debugging" )
@@ -49,7 +49,7 @@ log( 1, "..." )
 default_preferences_file = 'Default|Preferences'
 
 standard_settings_names = ( "Distraction Free", "Current Syntax", "Current Project", "This View" )
-standard_settings_types = ('default', 'default_'+sublime.platform())
+standard_settings_types = ('default', 'default_'+sublime.platform(), 'user')
 
 
 def show_quick_panel(view, options, done, highlighted=None):
@@ -176,7 +176,7 @@ def get_descriptions(data):
 
             if indent:
                 comment = ''.join([ l.startswith(indent) and l[len(indent):] or l for l in comment.splitlines(1) ])
-            description[m.group(1)] = {"description": comment.replace("\r", "") or "No help available :("}
+            description[m.group(1)] = {"description": comment.replace("\r", "") or "No help available"}
             comment = ""
 
     return description
@@ -297,7 +297,7 @@ def load_preferences():
                 for setting_name, setting_value in preference_data.items():
 
                     if setting_name not in description:
-                        preference_settings[setting_name] = {"description": "No help available :("}
+                        preference_settings[setting_name] = {"description": "No help available"}
 
                     else:
                         preference_settings[setting_name] = description[setting_name]
@@ -370,7 +370,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             @return key_path, key_value:
 
                     key_path:  Default/wrap_width (deprecated)
-                    key_value: {'value': True, 'description': 'No help available :('}
+                    key_value: {'value': True, 'description': 'No help available'}
         """
         platform = sublime.platform()
         settings = [ self.setting_files[setting_file], self.get_default_setting_names(setting_file) ]
@@ -392,7 +392,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                     if setting_name in setting[setting_type]:
                         return setting[setting_type][setting_name]
 
-        return {'value': None, 'description': 'No help available :('}
+        return {'value': None, 'description': 'No help available'}
 
     def get_default_setting_names(self, setting_name):
         pref_default = None
@@ -431,7 +431,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
     def is_preferences(self, setting_file):
         return setting_file in standard_settings_names
 
-    def getDefaultValueAndDescription(self, setting_file, setting_name):
+    def getDefaultValueAndDescription(self, setting_file, setting_name, is_metadata=False):
         """
         @setting_file  the name of the setting file name on self.setting_files
         @setting_name  the name of the setting
@@ -449,7 +449,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         """
         setting = self.setting_files[setting_file]
 
-        for item in 'default', 'default_'+sublime.platform():
+        for item in standard_settings_types:
 
             if setting_name in setting.get(item, {}):
                 return setting[item][setting_name]
@@ -457,7 +457,10 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         if self.is_preferences(setting_file):
             return self.getDefaultValueAndDescription(default_preferences_file, setting_name)
 
-        return None
+        if is_metadata:
+            return None
+
+        return {'value': 0, 'description': 'No Description available'}
 
     def getSettingMetadata(self, setting_file, setting_name, defaultValueAndDescription):
         """
@@ -468,11 +471,12 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                                             {'value': 0, 'description': 'Set to a value other than 0 to force wrapping'}
             @return
         """
-        meta = self.getDefaultValueAndDescription(setting_file, "meta."+setting_name)
+        settingMetadata = self.getDefaultValueAndDescription(setting_file, "meta."+setting_name, True)
+        log( 8, "get_SettingMetadata, settingMetadata: " + str( settingMetadata ) )
 
-        #sys.stderr.write("meta: %s\n" % meta)
-        if meta:
-            return meta.get('value')
+        #sys.stderr.write("settingMetadata: %s\n" % settingMetadata)
+        if settingMetadata:
+            return settingMetadata.get('value')
 
         setting_value = defaultValueAndDescription.get('value')
 
@@ -859,9 +863,9 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         options_paths = []
         options_desciptions = []
 
-        options_names.insert( 0, [ "QUIT (Esc)", "End Edit Settings" ] )
+        options_names.append( [ "QUIT (Esc)", "End Edit Settings" ] )
         options_paths.append( ["Filler", "To keep the same index as options_names"] )
-        options_desciptions.insert( 0, { "description": "You can press Esc, or select this option to end editing settings.\n" } )
+        options_desciptions.append( { "description": "You can press Esc, or select this option to end editing settings.\n" } )
 
         if setting_file is None:
             # log( 2, "run, self.setting_files.keys(): " + json.dumps( self.setting_files.keys(), indent=4 ) )
@@ -884,9 +888,9 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             self.is_main_panel = False
             log( 2, 'run, setting_file: ' + str( setting_file ) )
 
-            options_names.insert( 1, [ "BACK (Open the Main Menu)", "Choose another Setting to Edit" ] )
+            options_names.append( [ "BACK (Open the Main Menu)", "Choose another Setting to Edit" ] )
             options_paths.append( ["Filler", "To keep the same index as options_names"] )
-            options_desciptions.insert( 1, { "description": "Select this option to take another setting to edit.\n" } )
+            options_desciptions.append( { "description": "Select this option to take another setting to edit.\n" } )
 
             for setting_name in sorted(self.get_setting_names(setting_file)):
                 log( 2, 'run, setting_name: ' + str( setting_name ) )
@@ -914,9 +918,11 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         self.window.run_command("show_panel", {"panel": "output.preferences_editor_help"})
 
         def on_highlighted(index):
+            log( 8, "run, on_highlighted, index: " + str( index ) )
             help_view.run_command("select_all")
 
             if index < len( options_desciptions ):
+                log( 8, "run, on_highlighted, index: " + str( options_desciptions[index] ) )
                 help_view.run_command("insert", {"characters": options_desciptions[index]['description']})
 
             else:
