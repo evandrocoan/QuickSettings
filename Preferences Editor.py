@@ -46,7 +46,7 @@ log( 1, "Debugging" )
 log( 1, "..." )
 log( 1, "..." )
 
-default_preferences_file = 'Default|Preferences'
+default_preferences_file = 'Preferences'
 
 standard_settings_names = ( "Distraction Free", "Current Syntax", "Current Project", "This View" )
 standard_settings_types = ('default', 'default_'+sublime.platform(), 'user')
