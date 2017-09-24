@@ -534,13 +534,15 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                 return self.shutdown()
 
             elif index == 0:
-                self.preferences_selector()
+                pass
 
             elif index == 1:
                 self.set_setting_value(setting_file, setting_name, True)
+                sublime.status_message("Set %s to %s" % (setting_file + '/' + setting_name, 'True'))
 
             else:
                 self.set_setting_value(setting_file, setting_name, False)
+                sublime.status_message("Set %s to %s" % (setting_file + '/' + setting_name, 'False'))
 
             self.preferences_selector()
 
@@ -740,15 +742,16 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         settings = view.settings()
 
         def done(value):
+            view.erase_status("preferences_editor")
 
             try:
                 value = validate(value)
                 self.set_setting_value(setting_file, setting_name, value)
+                sublime.status_message("Set %s to %s" % (setting_file + '/' + setting_name, str( value )))
 
             except ValueError as e:
                 sublime.error_message("Invalid Value: %s" % e)
 
-            view.erase_status("preferences_editor")
             self.preferences_selector()
 
         def change(value):
