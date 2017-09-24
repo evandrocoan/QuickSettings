@@ -208,8 +208,8 @@ def get_current_syntax(view, syntax=None):
 def save_preference(view, setting_name, key, value):
     log( 2, "save__preference" )
     log( 2, "save__preference, setting_name: " +  str( setting_name ) )
-    log( 2, "save__preference, setting_name: " + str( key ) )
-    log( 2, "save__preference, setting_name: " +  str( value ) )
+    log( 2, "save__preference, key:          " + str( key ) )
+    log( 2, "save__preference, value:        " +  str( value ) )
 
     if setting_name == "This View":
         settings = view.settings()
@@ -367,10 +367,8 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             @setting_name   the name of the setting
             @setting_file   the name of the setting's file on self.setting_files[setting_file]
 
-            @return key_path, key_value:
-
-                    key_path:  Default/wrap_width (deprecated)
-                    key_value: {'value': True, 'description': 'No help available'}
+            @return dictionary with the setting value and description
+                    dict: {'value': True, 'description': 'No help available'}
         """
         platform = sublime.platform()
         settings = [ self.setting_files[setting_file], self.get_default_setting_names(setting_file) ]
@@ -519,15 +517,17 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             'widget': 'input'
         }
 
-    def widget_select_bool(self, option, value=None, default=None, validate=None):
+    def widget_select_bool(self, option, value=None, validate=None):
+        log(8, "widget__select_bool, option: %s" % str(option))
+
+        view    = self.window.active_view()
         options = ["BACK (Open the Last Menu)", "true", "false"]
-        view = self.window.active_view()
 
         setting_file = option[0]
         setting_name = option[1]
 
         def done(index):
-            log( 8, "widget_select_bool, done, index: " + str( index ) )
+            log( 8, "widget__select_bool, done, index: " + str( index ) )
             view.erase_status("preferences_editor")
 
             if index < 0:
@@ -558,8 +558,8 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         view.set_status("preferences_editor", "Set %s" % (setting_file + '/' + setting_name))
         show_quick_panel(view, options, done, highlight)
 
-    def widget_select(self, option, value=None, default=None, validate=None, values=[]):
-        log(8, "widget__select, done, option: %s" % str(option))
+    def widget_select(self, option, value=None, validate=None, values=[]):
+        log(8, "widget__select, option: %s" % str(option))
 
         view     = self.window.active_view()
         settings = view.settings()
@@ -616,21 +616,30 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         view.set_status("preferences_editor", "Set %s" % (setting_file + '/' + setting_name))
         show_quick_panel(view, options, done, highlight)
 
-    def widget_multiselect(self, pref_editor, key_path, value=None, default=None, validate=None, values=None):
-        view = pref_editor.window.active_view()
+    def widget_multiselect(self, option, value=None, validate=None, values=None):
+        log(8, "widget__multiselect, option: %s" % str(option))
+        view = self.window.active_view()
 
-        if isinstance(values[0], str):
-            values = [ dict(caption=v, value=v) for v in values ]
+        setting_file = option[0]
+        setting_name = option[1]
+
+        if len( values ) > 0 and isinstance( values[0], str ):
+            _values = [ dict(caption=_value, value=_value) for _value in values ]
 
         other = []
 
         def do_add_option():
-            options = [ v.get('caption', str(v.get('value')))
-                for v in values if v['value'] not in value ]
+            options = \
+            [
+                _value.get('caption', str(_value.get('value')))
+                for _value in _values if _value['value'] not in value
+            ]
 
             def done(index):
 
-                if index < 0: return self.shutdown()
+                if index < 0:
+                    return self.shutdown()
+
                 value.append(other[index])
                 do_show_panel()
 
@@ -639,8 +648,8 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         def do_remove_option():
             options = \
             [
-                v.get('caption', str(v.get('value')))
-                for v in values if v['value'] in value
+                _value.get('caption', str(_value.get('value')))
+                for _value in _values if _value['value'] in value
             ]
 
             def done(index):
@@ -653,13 +662,12 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
             show_quick_panel(view, options, done)
 
-
         def do_show_panel():
-            other[:] = [ v['value'] for v in values if v['value'] not in value ]
+            other[:] = [ _value['value'] for _value in _values if _value['value'] not in value ]
 
             options = \
             [
-                ["Set Value", sublime.encode_value(value, False)],
+                ["Save Changes", sublime.encode_value(value, False)],
                 ["Add Option", "From: "+sublime.encode_value(other, False)],
                 ["Remove Option", "From:"+sublime.encode_value(value, False)]
             ]
@@ -671,67 +679,76 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                     return self.shutdown()
 
                 if index == 0:
-                    pref_editor.set_setting_value(key_path, value, default)
+                    self.set_setting_value(setting_file, setting_name, value)
+                    sublime.status_message("Set %s to %s" % (setting_file + '/' + setting_name, str( value )))
+                    self.preferences_selector()
 
                 if index == 1:
-                    do_add_option()
+
+                    if len( other ) > 0:
+                        do_add_option()
+
+                    else:
+                        sublime.status_message("No options available to add.")
+                        do_show_panel()
 
                 if index == 2:
-                    do_remove_option()
 
-            view.set_status("preferences_editor", "Set %s" % key_path)
+                    if len( value ) > 0:
+                        do_remove_option()
+
+                    else:
+                        sublime.status_message("No options available to remove.")
+                        do_show_panel()
+
+            view.set_status("preferences_editor", "Set %s" % (setting_file + '/' + setting_name))
             show_quick_panel(view, options, done)
 
         do_show_panel()
 
-    def widget_select_resource(self, pref_editor, key_path, value=None, default=None, validate=None,
-                               find_resources="", strip_path=True, strip_suffix=True):
+    def widget_select_resource(self, option, value=None, validate=None, find_resources=""):
+        log(8, "widget__select_resource, option: %s" % str(option))
+        resources = sorted(sublime.find_resources(find_resources))
 
-        resources = sublime.find_resources(find_resources)
-        setting_name, type, key = self.convertSettingPathToNameTypeAndKey(key_path)
+        setting_file = option[0]
+        setting_name = option[1]
 
+        view     = self.window.active_view()
         settings = self.view.settings()
-        key_value = pref_editor.getPreferencesPathAndValue(setting_name, key)[1]
-        view_specific = settings.has(key) and settings.get(key) != key_value['value']
 
-        CURRENT = None
+        options = []
+        default = settings.get(setting_name, "")
 
-        if settings.has(key):
-            CURRENT = settings.get(key)
+        for resource in resources:
+            options.append( [ os.path.basename(resource), os.path.dirname(resource).replace("Packages/", "") ] )
 
-        options = resources
-
-        if strip_path:
-            options = [ os.path.basename(r) for r in options ]
-
-        if strip_suffix:
-            options = [ os.path.splitext(r)[0] for r in options ]
-
-        view = pref_editor.window.active_view()
+        options.insert( 0, ["Cancel Selection", "Go back to the settings menu"] )
+        resources.insert( 0, default )
 
         def done(index):
             view.erase_status("preferences_editor")
 
-            if view_specific:
-                settings.set(key, CURRENT)
+            if index < 1:
+                settings.set( setting_name, default )
 
-            else:
-                settings.erase(key)
+                if index == 0:
+                    self.preferences_selector()
 
-            if index < 0:
-                return self.shutdown()
+                else:
+                    return self.shutdown()
 
-            pref_editor.set_setting_value(key_path, resources[index], default)
+            self.set_setting_value(setting_file, setting_name, resources[index])
+            sublime.status_message("Set %s to %s" % (setting_file + '/' + setting_name, str( resources[index] )))
+            self.preferences_selector()
 
         def highlight(index):
-            log(1, "widget_select_resource, highlight: setting %s to %s" % (key, resources[index]))
-            settings.set(key, resources[index])
+            log(8, "widget__select_resource, highlight: setting %s to %s" % (setting_file, resources[index]))
+            settings.set(setting_name, resources[index])
 
-        view.set_status("preferences_editor", "Set %s" % key_path)
+        view.set_status("preferences_editor", "Set %s" % (setting_file + '/' + setting_name))
         show_quick_panel(view, options, done, highlight)
 
-
-    def widget_input(self, option, value=None, default=None, validate=None):
+    def widget_input(self, option, value=None, validate=None):
         setting_file = option[0]
         setting_name = option[1]
 
@@ -815,8 +832,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         if hasattr(self, "widget_"+widget):
             widget_func = getattr(self, "widget_"+widget)
 
-        widget_func(option, value=userValueAndDescription.get('value'),
-                    default=defaultValueAndDescription.get('value'), validate=validate, **args)
+        widget_func(option, value=userValueAndDescription.get('value'), validate=validate, **args)
 
     def change_value(self, options_path, index):
         setting_file = options_path[index][0]
