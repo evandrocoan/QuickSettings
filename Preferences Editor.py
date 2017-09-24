@@ -558,40 +558,37 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         view.set_status("preferences_editor", "Set %s" % (setting_file + '/' + setting_name))
         show_quick_panel(view, options, done, highlight)
 
-    def widget_select(self, pref_editor, key_path, value=None, default=None, validate=None, values=[]):
-        settings = self.view.settings()
+    def widget_select(self, option, value=None, default=None, validate=None, values=[]):
+        log(8, "widget__select, done, option: %s" % str(option))
 
-        setting_name, type, key = self.convertSettingPathToNameTypeAndKey(key_path)
-        key_value = pref_editor.getPreferencesPathAndValue(setting_name, key)[1]
-        view_specific = settings.has(key) and settings.get(key) != key_value['value']
+        view     = self.window.active_view()
+        settings = view.settings()
 
-        CURRENT = None
+        setting_file = option[0]
+        setting_name = option[1]
 
-        if settings.has(key):
-            CURRENT = settings.get(key)
+        options  = []
+        commands = []
+        args     = []
+        types    = []
+        _values  = []
 
-        commands = None
+        if len( values ) > 0 and isinstance(values[0], dict):
 
-        if isinstance(values[0], dict):
-            options = [ x['caption'] for x in values ]
-            commands = [ x.get('command') for x in values ]
-            args = [ x.get('args', {}) for x in values ]
-            types = [ x.get('type', 'window') for x in values ]
-            values = [ x.get('value') for x in values ]
+            for x in values:
+                args.append( x.get('args', {}) )
+                types.append( x.get('type', 'window') )
+                _values.append( x.get('value') )
+                options.append( x['caption'] )
+                commands.append( x.get('command') )
 
         else:
+            _values = values
             options = [ str(x) for x in values ]
 
-        view = pref_editor.window.active_view()
-
         def done(index):
+            log(8, "widget__select, done, index: %s" % str(index))
             view.erase_status("preferences_editor")
-
-            if view_specific:
-                self.view.settings().set(key, CURRENT)
-
-            else:
-                self.view.settings().erase(key)
 
             if index < 0:
                 return self.shutdown()
@@ -608,13 +605,15 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                     sublime.set_timeout(lambda: context.run_command(commands[index], args[index]), 10)
                     return
 
-            pref_editor.set_setting_value(key_path, values[index], default)
+            self.set_setting_value(setting_file, setting_name, _values[index])
+            sublime.status_message("Set %s to %s" % (setting_file + '/' + setting_name, str(_values[index])))
+            self.preferences_selector()
 
         def highlight(index):
-            log(1, "widget_select, highlight: setting %s to %s" % (key, values[index]))
-            settings.set(key, values[index])
+            log(8, "widget__select, highlight: setting %s to %s" % (setting_name, _values[index]))
+            settings.set(setting_name, _values[index])
 
-        view.set_status("preferences_editor", "Set %s" % key_path)
+        view.set_status("preferences_editor", "Set %s" % (setting_file + '/' + setting_name))
         show_quick_panel(view, options, done, highlight)
 
     def widget_multiselect(self, pref_editor, key_path, value=None, default=None, validate=None, values=None):
