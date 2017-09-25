@@ -205,34 +205,37 @@ def get_current_syntax(view, syntax=None):
     return current_syntax
 
 
-def save_preference(view, setting_name, key, value):
+def save_preference(view, setting_file, setting_name, value):
     log( 2, "save__preference" )
-    log( 2, "save__preference, setting_name: " +  str( setting_name ) )
-    log( 2, "save__preference, key:          " + str( key ) )
+    log( 2, "save__preference, setting_file: " +  str( setting_file ) )
+    log( 2, "save__preference, setting_name: " + str( setting_name ) )
     log( 2, "save__preference, value:        " +  str( value ) )
 
-    if setting_name == "This View":
+    if setting_file == "This View":
         settings = view.settings()
-        settings.set(key, value)
+        settings.set(setting_name, value)
         return
 
-    if setting_name == "Current Project":
+    if setting_file == "Current Project":
         data = view.window().project_data()
 
         if 'settings' not in data:
             data['settings'] = {}
 
-        data['settings'][key] = value
+        data['settings'][setting_name] = value
         view.window().set_project_data(data)
         return
 
-    setting_name = os.path.basename(setting_name.replace("|", "/"))
+    if setting_file == "Current Syntax":
+        setting_file = self.current_syntax
 
-    log( 2, "save__preference, setting_name: " + setting_name )
-    settings = sublime.load_settings(setting_name+'.sublime-settings')
+    setting_file = os.path.basename(setting_file.replace("|", "/"))
 
-    settings.set(key, value)
-    sublime.save_settings(setting_name+'.sublime-settings')
+    log( 2, "save__preference, setting_file: " + setting_file )
+    settings = sublime.load_settings(setting_file+'.sublime-settings')
+
+    settings.set(setting_name, value)
+    sublime.save_settings(setting_file+'.sublime-settings')
 
 
 def load_preferences():
@@ -337,27 +340,8 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
     #
 
     def set_setting_value(self, setting_file, setting_name, value):
-
-        if setting_file == "Current Syntax":
-            setting_file = self.current_syntax
-
         save_preference(self.view, setting_file, setting_name, value)
         self.options_names[self.index][1] = sublime.encode_value(value, False)
-
-        #settings = sublime.load_settings(setting_file+'.sublime-settings')
-        #settings.set()
-
-        #
-        # settings = sublime.load_settings(preferences_filename())
-        # ignored = settings.get('ignored_packages')
-        # if not ignored:
-        #     ignored = []
-        # for package in packages:
-        #     if not package in ignored:
-        #         ignored.append(package)
-        #         disabled.append(package)
-        # settings.set('ignored_packages', ignored)
-        # sublime.save_settings(preferences_filename())
 
     def make_pref_rec(self, setting_file, setting_type, setting_name, value):
         return "%s/%s/%s" % (setting_file, setting_type, setting_name), value
