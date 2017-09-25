@@ -39,12 +39,14 @@ import json
 # 8   - Quick panel selection.
 #
 # 127 - All debugging levels at the same time.
-log = debug_tools.Debugger( 127, "Debug", "DebugLog.txt" )
+log = debug_tools.Debugger( 1, "Debug" )
 
+# log.log_to_file( "DebugLog.txt" )
 log.clear_log_file()
-log( 1, "Debugging" )
-log( 1, "..." )
-log( 1, "..." )
+
+log( 2, "Debugging" )
+log( 2, "..." )
+log( 2, "..." )
 
 this_view_file = 'Current/This View'
 current_syntax_file = 'Current/This View'
