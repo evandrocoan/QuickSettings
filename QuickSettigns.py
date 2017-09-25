@@ -81,22 +81,22 @@ def get_preference_name(file):
 
 def json_list(x):
 
-    if not isinstance(d, list):
-        raise ValueError("Expected a JSON list")
-
     d = sublime.decode_value(x)
     #sys.stderr.write("d: %s\n" % d)
+
+    if not isinstance(d, list):
+        raise ValueError("Expected a JSON list")
 
     return d
 
 
 def json_dict(x):
 
-    if not isinstance(d, dict):
-        raise ValueError("Expected a JSON dictionary")
-
     d = sublime.decode_value(x)
     #sys.stderr.write("d: %s\n" % d)
+
+    if not isinstance(d, dict):
+        raise ValueError("Expected a JSON dictionary")
 
     return d
 
