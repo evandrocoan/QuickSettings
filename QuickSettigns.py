@@ -1001,14 +1001,10 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
 
                 options_desciptions.append( defaultValueAndDescription )
 
-            for option in options_paths:
-
-                if option[0] not in last_access:
-                    last_access[option[0]] = 0
-
         help_view = self.window.create_output_panel("preferences_editor_help")
         help_view.settings().set('auto_indent', False)
 
+        # Always create the main dictionary entry as it is only one key
         if main_function_key not in last_access:
             last_access[main_function_key] = 0
 
@@ -1047,6 +1043,7 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
 
             else:
                 last_access[options_paths[index][0]] = index
+
                 self.index = index
                 self.change_value(options_paths, index)
 
@@ -1057,6 +1054,10 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
             position = lambda: last_access[main_function_key]
 
         else:
+            # Only create a dictionary entry for the remaining keys when it is required
+            if self.setting_file not in last_access:
+                last_access[self.setting_file] = 0
+
             position = lambda: last_access[self.setting_file]
 
         self.options_names = options_names
