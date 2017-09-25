@@ -72,7 +72,7 @@ def show_quick_panel(view, options, done, highlighted=None, last=-1):
     if callable( last ):
         last = last()
 
-    sublime.set_timeout(lambda: view.window().show_quick_panel(options, done, 0, last, highlighted), 10)
+    sublime.set_timeout(lambda: view.window().show_quick_panel(options, done, sublime.KEEP_OPEN_ON_FOCUS_LOST, last, highlighted), 10)
 
 
 def get_preference_name(file):
