@@ -49,7 +49,7 @@ import json
 # log( 2, "..." )
 
 this_view_file = 'Current/This View'
-current_syntax_file = 'Current/This View'
+current_syntax_file = 'Current Syntax'
 current_project_file = 'Current Project'
 distraction_free_file = 'Distraction Free'
 default_preferences_file = 'Preferences'
@@ -370,6 +370,8 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
     #
 
     def set_setting_value(self, setting_file, setting_name, value):
+        # log( 2, "set__setting_value, setting_file: " +  str( setting_file ) )
+        # log( 2, "set__setting_value, setting_name: " +  str( setting_name ) )
         if setting_file == current_syntax_file:
             setting_file = self.current_syntax
 
