@@ -532,15 +532,18 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         setting_file = option[0]
         setting_name = option[1]
 
+        settings = view.settings()
+        default  = settings.get(setting_name, "")
+
         def done(index):
             log( 8, "widget__select_bool, done, index: " + str( index ) )
             view.erase_status("preferences_editor")
 
-            if index < 0:
-                return self.shutdown()
+            if index < 1:
+                settings.set( setting_name, default )
 
-            elif index == 0:
-                pass
+                if index < 0:
+                    return self.shutdown()
 
             elif index == 1:
                 self.set_setting_value(setting_file, setting_name, True)
@@ -554,11 +557,14 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
         def highlight(index):
 
-            if index == 0:
-                self.view.settings().set(setting_name, True)
+            if index < 1:
+                settings.set(setting_name, default)
 
-            else:
-                self.view.settings().set(setting_name, False)
+            elif index == 1:
+                settings.set(setting_name, True)
+
+            elif index == 2:
+                settings.set(setting_name, False)
 
         # for op in options: log( 2, "op: {0}".format( op ) )
         view.set_status("preferences_editor", "Set %s" % (setting_file + '/' + setting_name))
