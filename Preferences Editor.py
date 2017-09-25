@@ -57,9 +57,22 @@ default_preferences_file = 'Preferences'
 standard_settings_names = ( distraction_free_file, current_syntax_file, current_project_file, this_view_file )
 standard_settings_types = ('default', 'default_'+sublime.platform(), 'user')
 
+last_access = {}
+main_function_key = 'main_function'
 
-def show_quick_panel(view, options, done, highlighted=None):
-    sublime.set_timeout(lambda: view.window().show_quick_panel(options, done, 0, -1, highlighted), 10)
+
+def show_quick_panel(view, options, done, highlighted=None, last=-1):
+    """
+        Allow to add a default text to the quick panel API self.window.show_quick_panel
+        https://github.com/SublimeTextIssues/Core/issues/1896
+    """
+
+    # How can I test whether a variable holds a lambda?
+    # https://stackoverflow.com/questions/3655842/how-can-i-test-whether-a-variable-holds-a-lambda
+    if callable( last ):
+        last = last()
+
+    sublime.set_timeout(lambda: view.window().show_quick_panel(options, done, 0, last, highlighted), 10)
 
 
 def get_preference_name(file):
@@ -982,8 +995,16 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
                 options_desciptions.append( defaultValueAndDescription )
 
+            for option in options_paths:
+
+                if option[0] not in last_access:
+                    last_access[option[0]] = 0
+
         help_view = self.window.create_output_panel("preferences_editor_help")
         help_view.settings().set('auto_indent', False)
+
+        if main_function_key not in last_access:
+            last_access[main_function_key] = 0
 
         self.window.run_command("show_panel", {"panel": "output.preferences_editor_help"})
 
@@ -1015,17 +1036,25 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                 self.window.run_command("edit_preferences")
 
             elif self.is_main_panel:
+                last_access[main_function_key] = index
                 self.window.run_command("edit_preferences", {"setting_file": options_names[index][0]})
 
             else:
+                last_access[options_paths[index][0]] = index
                 self.index = index
                 self.change_value(options_paths, index)
 
+        position = None
         log( 4, "run, options_names: " + json.dumps( options_names, indent=4 ) )
 
-        self.options_names = options_names
-        self.preferences_selector = lambda: show_quick_panel(self.view, self.options_names, done, on_highlighted)
-        self.preferences_selector()
+        if self.is_main_panel:
+            position = lambda: last_access[main_function_key]
 
+        else:
+            position = lambda: last_access[self.setting_file]
+
+        self.options_names = options_names
+        self.preferences_selector = lambda: show_quick_panel(self.view, self.options_names, done, on_highlighted, position)
+        self.preferences_selector()
 
 
