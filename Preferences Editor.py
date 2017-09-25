@@ -642,6 +642,9 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         setting_file = option[0]
         setting_name = option[1]
 
+        settings = view.settings()
+        default  = settings.get(setting_name, "")
+
         if len( values ) > 0 and isinstance( values[0], str ):
             _values = [ dict(caption=_value, value=_value) for _value in values ]
 
@@ -657,9 +660,11 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             def done(index):
 
                 if index < 0:
+                    settings.set( setting_name, default )
                     return self.shutdown()
 
                 value.append(other[index])
+                settings.set(setting_name, value)
                 do_show_panel()
 
             show_quick_panel(view, options, done)
@@ -674,9 +679,11 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             def done(index):
 
                 if index < 0:
+                    settings.set( setting_name, default )
                     return self.shutdown()
 
                 value.remove(value[index])
+                settings.set(setting_name, value)
                 do_show_panel()
 
             show_quick_panel(view, options, done)
@@ -695,6 +702,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                 view.erase_status("preferences_editor")
 
                 if index < 0:
+                    settings.set( setting_name, default )
                     return self.shutdown()
 
                 if index == 0:
