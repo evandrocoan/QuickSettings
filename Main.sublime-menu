@@ -12,14 +12,18 @@
                 "children":
                 [
                     {
-                        "caption": "Preferences Editor",
+                        "caption": "Quick Settings",
                         "children":
                         [
                             {
                                 "command": "open_file",
-                                "args": {"file": "${packages}/Preferences Editor/README.rst"},
+                                "args": {"file": "${packages}/QuickSettings/README.rst"},
                                 "caption": "README"
-                            }
+                            },
+                            {
+                                "command": "quick_settings_edit_preferences",
+                                "caption": "Quick Settings: Edit Preferences..."
+                            },
                         ]
                     }
                 ]

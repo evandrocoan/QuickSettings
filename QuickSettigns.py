@@ -360,7 +360,7 @@ def load_syntax_names():
 # Edit Syntax Preferences --> User
 #
 
-class EditPreferencesCommand(sublime_plugin.WindowCommand):
+class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
 
     # meta.<setting_name>: {
     #      "widget": "select"
