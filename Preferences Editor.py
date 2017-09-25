@@ -453,7 +453,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                 return setting[item][setting_name]
 
         if self.is_preferences(setting_file):
-            return self.getDefaultValueAndDescription(default_preferences_file, setting_name)
+            return self.getDefaultValueAndDescription(default_preferences_file, setting_name, is_metadata)
 
         if is_metadata:
             return None
