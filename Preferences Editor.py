@@ -314,7 +314,7 @@ def load_preferences():
                     preference_settings[setting_name]['value'] = setting_value
 
             except:
-                log(1, "load_preferences: Error reading %s (preference_data is %s)" % (preference_file, preference_data))
+                log( 1, "load_preferences: Error reading %s (preference_data is %s)" % (preference_file, preference_data) )
 
             preference.update(preference_settings)
 
@@ -524,7 +524,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         }
 
     def widget_select_bool(self, option, value=None, validate=None):
-        log(8, "widget__select_bool, option: %s" % str(option))
+        log( 8, "widget__select_bool, option: %s" % str(option) )
 
         view    = self.window.active_view()
         options = ["BACK (Open the Last Menu)", "true", "false"]
@@ -565,14 +565,16 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         show_quick_panel(view, options, done, highlight)
 
     def widget_select(self, option, value=None, validate=None, values=[]):
-        log(8, "widget__select, option: %s" % str(option))
-
-        view     = self.window.active_view()
-        settings = view.settings()
+        log( 8, "widget__select, option: %s" % str(option) )
+        view = self.window.active_view()
 
         setting_file = option[0]
         setting_name = option[1]
 
+        settings = view.settings()
+        default  = settings.get(setting_name, "")
+
+        # values.append({})
         options  = []
         commands = []
         args     = []
@@ -580,24 +582,35 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         _values  = []
 
         if len( values ) > 0 and isinstance(values[0], dict):
+            values.insert( 0, {"value": default, "caption": "Cancel Changes"} )
 
-            for x in values:
-                args.append( x.get('args', {}) )
-                types.append( x.get('type', 'window') )
-                _values.append( x.get('value') )
-                options.append( x['caption'] )
-                commands.append( x.get('command') )
+            for data in values:
+                args.append( data.get('args', {}) )
+                types.append( data.get('type', 'window') )
+                _values.append( data.get('value') )
+                options.append( data['caption'] )
+                commands.append( data.get('command') )
 
         else:
+            values.insert( 0, default )
             _values = values
             options = [ str(x) for x in values ]
 
+        options.remove( default )
+        options.insert( 0, [ "Cancel Changes" ] )
+
         def done(index):
-            log(8, "widget__select, done, index: %s" % str(index))
+            log( 8, "widget__select, done, index: %s" % str(index) )
             view.erase_status("preferences_editor")
 
-            if index < 0:
-                return self.shutdown()
+            if index < 1:
+                settings.set( setting_name, default )
+
+                if index == 0:
+                    return self.preferences_selector()
+
+                else:
+                    return self.shutdown()
 
             # if command is set, let the command handle this preference
             if commands:
@@ -616,14 +629,14 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             self.preferences_selector()
 
         def highlight(index):
-            log(8, "widget__select, highlight: setting %s to %s" % (setting_name, _values[index]))
+            log( 8, "widget__select, highlight: setting %s to %s" % (setting_name, _values[index]) )
             settings.set(setting_name, _values[index])
 
         view.set_status("preferences_editor", "Set %s" % (setting_file + '/' + setting_name))
         show_quick_panel(view, options, done, highlight)
 
     def widget_multiselect(self, option, value=None, validate=None, values=None):
-        log(8, "widget__multiselect, option: %s" % str(option))
+        log( 8, "widget__multiselect, option: %s" % str(option) )
         view = self.window.active_view()
 
         setting_file = option[0]
@@ -713,7 +726,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         do_show_panel()
 
     def widget_select_resource(self, option, value=None, validate=None, find_resources=""):
-        log(8, "widget__select_resource, option: %s" % str(option))
+        log( 8, "widget__select_resource, option: %s" % str(option) )
         resources = sorted(sublime.find_resources(find_resources))
 
         setting_file = option[0]
@@ -748,7 +761,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             self.preferences_selector()
 
         def highlight(index):
-            log(8, "widget__select_resource, highlight: setting %s to %s" % (setting_file, resources[index]))
+            log( 8, "widget__select_resource, highlight: setting %s to %s" % (setting_file, resources[index]) )
             settings.set(setting_name, resources[index])
 
         view.set_status("preferences_editor", "Set %s" % (setting_file + '/' + setting_name))
@@ -762,6 +775,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         view.set_status("preferences_editor", "Set %s" % (setting_file  + '/' + setting_name))
 
         settings = view.settings()
+        default  = settings.get(setting_name, "")
 
         def done(value):
             view.erase_status("preferences_editor")
@@ -772,6 +786,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
                 sublime.status_message("Set %s to %s" % (setting_file + '/' + setting_name, str( value )))
 
             except ValueError as e:
+                settings.set( setting_name, default )
                 sublime.error_message("Invalid Value: %s" % e)
 
             self.preferences_selector()
@@ -779,14 +794,16 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         def change(value):
 
             try:
-                v = validate(value)
-                settings.set(setting_name, v)
-                log(1, "widget__input, change: set %s to %s" % (setting_name, v))
+                value = validate(value)
+                settings.set(setting_name, value)
+                log( 8, "widget__input, change: set %s to %s" % (setting_name, value) )
 
             except ValueError as e:
+                settings.set( setting_name, default )
                 sublime.status_message("Invalid Value: %s" % e)
 
         def cancel():
+            settings.set( setting_name, default )
             view.erase_status("preferences_editor")
             self.preferences_selector()
 
