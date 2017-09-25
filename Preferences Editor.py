@@ -48,12 +48,16 @@ log( 1, "..." )
 
 default_preferences_file = 'Preferences'
 
-standard_settings_names = ( "Distraction Free", "Current Syntax", "Current Project", "This View" )
+standard_settings_names = ( "Distraction Free", "Current Syntax", "Current Project", "Current/This View" )
 standard_settings_types = ('default', 'default_'+sublime.platform(), 'user')
 
 
 def show_quick_panel(view, options, done, highlighted=None):
     sublime.set_timeout(lambda: view.window().show_quick_panel(options, done, 0, -1, highlighted), 10)
+
+
+def get_preference_name(file):
+    return os.path.basename(file).rsplit('.', 1)[0]
 
 
 def json_list(x):
@@ -199,8 +203,7 @@ def get_current_syntax(view, syntax=None):
         current_syntax = syntax
 
     elif settings.has('syntax'):
-        current_syntax = settings.get('syntax')
-        current_syntax = current_syntax.replace("Packages/", "").replace("/", "|").rsplit('.', 1)[0]
+        current_syntax = get_preference_name(settings.get('syntax'))
 
     return current_syntax
 
@@ -211,7 +214,7 @@ def save_preference(view, setting_file, setting_name, value):
     log( 2, "save__preference, setting_name: " + str( setting_name ) )
     log( 2, "save__preference, value:        " +  str( value ) )
 
-    if setting_file == "This View":
+    if setting_file == "Current/This View":
         settings = view.settings()
         settings.set(setting_name, value)
         return
@@ -226,10 +229,7 @@ def save_preference(view, setting_file, setting_name, value):
         view.window().set_project_data(data)
         return
 
-    if setting_file == "Current Syntax":
-        setting_file = self.current_syntax
-
-    setting_file = os.path.basename(setting_file.replace("|", "/"))
+    setting_file = os.path.basename(setting_file)
 
     log( 2, "save__preference, setting_file: " + setting_file )
     settings = sublime.load_settings(setting_file+'.sublime-settings')
@@ -247,7 +247,7 @@ def load_preferences():
     for preference_file in preferences_files:
 
         log( 2, "load__preferences, preference_file: {0}".format( preference_file ) )
-        preference_name = os.path.basename(preference_file).rsplit('.', 1)[0]
+        preference_name = get_preference_name(preference_file)
 
         log( 2, "load__preferences, preference_name: {0}".format( preference_name ) )
         platform = "any"
@@ -322,6 +322,19 @@ def load_preferences():
     return preferences
 
 
+def load_syntax_names():
+    syntax_names = []
+    syntax_types = [ "*.tmLanguage", "*.sublime-syntax" ]
+
+    for syntax_type in syntax_types:
+        syntaxes = sublime.find_resources(syntax_type)
+
+        for syntax in syntaxes:
+            syntax_names.append(os.path.basename(syntax).rsplit('.', 1)[0])
+
+    return syntax_names
+
+
 # commands are
 #
 # Edit Preferences        --> User
@@ -340,6 +353,9 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
     #
 
     def set_setting_value(self, setting_file, setting_name, value):
+        if setting_file == "Current Syntax":
+            setting_file = self.current_syntax
+
         save_preference(self.view, setting_file, setting_name, value)
         self.options_names[self.index][1] = sublime.encode_value(value, False)
 
@@ -411,7 +427,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         )
 
     def is_preferences(self, setting_file):
-        return setting_file in standard_settings_names
+        return setting_file in self.syntax_names or setting_file in standard_settings_names
 
     def getDefaultValueAndDescription(self, setting_file, setting_name, is_metadata=False):
         """
@@ -845,10 +861,20 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
         self.view          = self.window.active_view()
         self.setting_files = load_preferences()
 
+        self.syntax_names   = load_syntax_names()
         self.setting_file   = setting_file
         self.current_syntax = get_current_syntax(self.view, syntax_name)
 
-        self.setting_files['This View'] = { 'default': {}, 'default_'+sublime.platform(): {} }
+        for syntax in self.syntax_names:
+
+            if syntax not in self.setting_files:
+                self.setting_files[syntax] = { 'default': {}, 'default_'+sublime.platform(): {} }
+
+        # https://bitbucket.org/klorenz/sublimepreferenceseditor/pull-requests/4
+        if self.current_syntax in self.setting_files:
+            self.setting_files['Current Syntax'] = self.setting_files[self.current_syntax]
+
+        self.setting_files['Current/This View'] = { 'default': {}, 'default_'+sublime.platform(): {} }
         self.setting_files['Current Project'] = { 'default': {}, 'default_'+sublime.platform(): {} }
 
         options_names = []
@@ -863,18 +889,33 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             # log( 2, "run, self.setting_files.keys(): " + json.dumps( self.setting_files.keys(), indent=4 ) )
             self.is_main_panel = True
 
-            # options_names = \
-            # [
-            #     ["Preferences", "General Settings"],
-            #     ["Distraction Free", "Preferences for Distraction Free Mode"],
-            #     ["Current Syntax", "%s-specific Preferences" % self.current_syntax],
-            #     ["Current Project", "Project-specific Preferences"],
-            #     ["This View", "Preferences for this View only"]
-            # ]
-
             for setting_file in sorted(self.setting_files.keys()):
                 log( 2, 'run, setting_file: ' + str( setting_file ) )
-                options_names.append( [ setting_file, "Package Settings" ] )
+
+                if setting_file in self.syntax_names:
+                    options_names.append( [ setting_file, "Syntax Settings" ] )
+
+                else:
+                    options_names.append( [ setting_file, "Package Settings" ] )
+
+            options_start_index = 1
+            options_to_move = \
+            [
+                [ default_preferences_file, "General Settings" ],
+                [ "Distraction Free", "Preferences for Distraction Free Mode" ],
+                [ "Current Syntax", "%s Syntax Specific Preferences" % self.current_syntax ],
+                [ "Current Project", "Current Project Specific Preferences" ],
+                [ "Current/This View", "Preferences for this View only" ]
+            ]
+
+            for _option in options_to_move:
+                option = [ _option[0], "Package Settings" ]
+
+                if option in options_names:
+                    options_names.remove( option )
+
+                    options_names.insert( options_start_index, _option )
+                    options_start_index += 1
 
         else:
             self.is_main_panel = False
