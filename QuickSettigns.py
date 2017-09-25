@@ -389,6 +389,7 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
             @return dictionary with the setting value and description
                     dict: {'value': True, 'description': 'No help available'}
         """
+        _setting = {'value': None, 'description': 'No help available'}
         platform = sublime.platform()
         settings = [ self.setting_files[setting_file], self.get_default_setting_names(setting_file) ]
 
@@ -407,9 +408,14 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
                 if setting_type in setting:
 
                     if setting_name in setting[setting_type]:
-                        return setting[setting_type][setting_name]
+                        _setting = setting[setting_type][setting_name]
 
-        return {'value': None, 'description': 'No help available'}
+                        if setting_file == this_view_file:
+                            _setting['value'] = self.view.settings().get(setting_name)
+
+                        return _setting
+
+        return _setting
 
     def get_default_setting_names(self, setting_name):
         pref_default = None
@@ -952,10 +958,10 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
             options_to_move = \
             [
                 [ default_preferences_file, "General Settings" ],
+                [ this_view_file, "Preferences for this View only" ],
                 [ distraction_free_file, "Preferences for Distraction Free Mode" ],
                 [ current_syntax_file, "%s Syntax Specific Preferences" % self.current_syntax ],
-                [ current_project_file, "Current Project Specific Preferences" ],
-                [ this_view_file, "Preferences for this View only" ]
+                [ current_project_file, "Current Project Specific Preferences" ]
             ]
 
             for _option in options_to_move:
