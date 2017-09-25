@@ -413,6 +413,12 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
                         if setting_file == this_view_file:
                             _setting['value'] = self.view.settings().get(setting_name)
 
+                        elif setting_file == current_project_file:
+                            data = self.view.window().project_data()
+
+                            if 'settings' in data and setting_name in data['settings']:
+                                _setting['value'] = data['settings'].get(setting_name)
+
                         return _setting
 
         return _setting
