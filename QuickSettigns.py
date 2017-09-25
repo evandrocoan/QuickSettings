@@ -39,14 +39,14 @@ import json
 # 8   - Quick panel selection.
 #
 # 127 - All debugging levels at the same time.
-log = debug_tools.Debugger( 1, "Debug" )
+# log = debug_tools.Debugger( 1, "Debug" )
 
 # log.log_to_file( "DebugLog.txt" )
-log.clear_log_file()
+# log.clear_log_file()
 
-log( 2, "Debugging" )
-log( 2, "..." )
-log( 2, "..." )
+# log( 2, "Debugging" )
+# log( 2, "..." )
+# log( 2, "..." )
 
 this_view_file = 'Current/This View'
 current_syntax_file = 'Current/This View'
@@ -228,10 +228,10 @@ def get_current_syntax(view, syntax=None):
 
 
 def save_preference(view, setting_file, setting_name, value):
-    log( 2, "save__preference" )
-    log( 2, "save__preference, setting_file: " +  str( setting_file ) )
-    log( 2, "save__preference, setting_name: " + str( setting_name ) )
-    log( 2, "save__preference, value:        " +  str( value ) )
+    # log( 2, "save__preference" )
+    # log( 2, "save__preference, setting_file: " +  str( setting_file ) )
+    # log( 2, "save__preference, setting_name: " + str( setting_name ) )
+    # log( 2, "save__preference, value:        " +  str( value ) )
 
     if setting_file == this_view_file:
         settings = view.settings()
@@ -250,7 +250,7 @@ def save_preference(view, setting_file, setting_name, value):
 
     setting_file = os.path.basename(setting_file)
 
-    log( 2, "save__preference, setting_file: " + setting_file )
+    # log( 2, "save__preference, setting_file: " + setting_file )
     settings = sublime.load_settings(setting_file+'.sublime-settings')
 
     settings.set(setting_name, value)
@@ -258,17 +258,17 @@ def save_preference(view, setting_file, setting_name, value):
 
 
 def load_preferences():
-    log( 2, "load__preferences" )
+    # log( 2, "load__preferences" )
 
     preferences = {}
     preferences_files = sublime.find_resources("*.sublime-settings")
 
     for preference_file in preferences_files:
 
-        log( 2, "load__preferences, preference_file: {0}".format( preference_file ) )
+        # log( 2, "load__preferences, preference_file: {0}".format( preference_file ) )
         preference_name = get_preference_name(preference_file)
 
-        log( 2, "load__preferences, preference_name: {0}".format( preference_name ) )
+        # log( 2, "load__preferences, preference_name: {0}".format( preference_name ) )
         platform = "any"
 
         if preference_name[-5:].lower() == "(osx)":
@@ -283,7 +283,7 @@ def load_preferences():
             preference_name = preference_name[:-8]
             platform = "linux"
 
-        log( 2, "load__preferences, preference_name: {0}".format( preference_name ) )
+        # log( 2, "load__preferences, preference_name: {0}".format( preference_name ) )
 
         if "/User/" in preference_file:
             setting_type = "user"
@@ -303,7 +303,7 @@ def load_preferences():
         #sys.stderr.write("preference_name: %s, setting_type: %s\n" % (preference_name, setting_type))
         preference = preferences[preference_name][setting_type]
 
-        log( 2, "preference: " + str( preference ) )
+        # log( 2, "preference: " + str( preference ) )
         preference_data = sublime.load_resource(preference_file)
 
         if preference_data:
@@ -327,16 +327,14 @@ def load_preferences():
                     preference_settings[setting_name]['value'] = setting_value
 
             except:
-                log( 1, "load_preferences: Error reading %s (preference_data is %s)" % (preference_file, preference_data) )
+                print( "load_preferences: Error reading %s (preference_data is %s)" % (preference_file, preference_data) )
 
             preference.update(preference_settings)
 
-    # log( 2, "PREFERENCES: " + preferences.encode('utf8') )
-
     # for item in preferences:
-    #     log( 2, "isinstance(" + str( item ) + ", str):  " + str( isinstance(item, str) ) )
-    #     log( 2, "isinstance(" + str( item ) + ", dict): " + str( isinstance(item, dict) ) )
-    #     log( 2, "item: " + json.dumps( preferences[item] ) )
+    #     print( "isinstance(" + str( item ) + ", str):  " + str( isinstance(item, str) ) )
+    #     print( "isinstance(" + str( item ) + ", dict): " + str( isinstance(item, dict) ) )
+    #     print( "item: " + json.dumps( preferences[item] ) )
 
     return preferences
 
@@ -489,7 +487,7 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
             @return
         """
         settingMetadata = self.getDefaultValueAndDescription(setting_file, "meta."+setting_name, True)
-        log( 8, "get_SettingMetadata, settingMetadata: " + str( settingMetadata ) )
+        # log( 8, "get_SettingMetadata, settingMetadata: " + str( settingMetadata ) )
 
         #sys.stderr.write("settingMetadata: %s\n" % settingMetadata)
         if settingMetadata:
@@ -537,7 +535,7 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
         }
 
     def widget_select_bool(self, option, value=None, validate=None):
-        log( 8, "widget__select_bool, option: %s" % str(option) )
+        # log( 8, "widget__select_bool, option: %s" % str(option) )
 
         view    = self.window.active_view()
         options = ["BACK (Open the Last Menu)", "true", "false"]
@@ -549,7 +547,7 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
         default  = settings.get(setting_name, "")
 
         def done(index):
-            log( 8, "widget__select_bool, done, index: " + str( index ) )
+            # log( 8, "widget__select_bool, done, index: " + str( index ) )
             view.erase_status("preferences_editor")
 
             if index < 1:
@@ -584,7 +582,7 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
         show_quick_panel(view, options, done, highlight)
 
     def widget_select(self, option, value=None, validate=None, values=[]):
-        log( 8, "widget__select, option: %s" % str(option) )
+        # log( 8, "widget__select, option: %s" % str(option) )
         view = self.window.active_view()
 
         setting_file = option[0]
@@ -619,7 +617,7 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
         options.insert( 0, [ "Cancel Changes" ] )
 
         def done(index):
-            log( 8, "widget__select, done, index: %s" % str(index) )
+            # log( 8, "widget__select, done, index: %s" % str(index) )
             view.erase_status("preferences_editor")
 
             if index < 1:
@@ -648,14 +646,14 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
             self.preferences_selector()
 
         def highlight(index):
-            log( 8, "widget__select, highlight: setting %s to %s" % (setting_name, _values[index]) )
+            # log( 8, "widget__select, highlight: setting %s to %s" % (setting_name, _values[index]) )
             settings.set(setting_name, _values[index])
 
         view.set_status("preferences_editor", "Set %s" % (setting_file + '/' + setting_name))
         show_quick_panel(view, options, done, highlight)
 
     def widget_multiselect(self, option, value=None, validate=None, values=None):
-        log( 8, "widget__multiselect, option: %s" % str(option) )
+        # log( 8, "widget__multiselect, option: %s" % str(option) )
         view = self.window.active_view()
 
         setting_file = option[0]
@@ -753,7 +751,7 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
         do_show_panel()
 
     def widget_select_resource(self, option, value=None, validate=None, find_resources=""):
-        log( 8, "widget__select_resource, option: %s" % str(option) )
+        # log( 8, "widget__select_resource, option: %s" % str(option) )
         resources = sorted(sublime.find_resources(find_resources))
 
         setting_file = option[0]
@@ -788,7 +786,7 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
             self.preferences_selector()
 
         def highlight(index):
-            log( 8, "widget__select_resource, highlight: setting %s to %s" % (setting_file, resources[index]) )
+            # log( 8, "widget__select_resource, highlight: setting %s to %s" % (setting_file, resources[index]) )
             settings.set(setting_name, resources[index])
 
         view.set_status("preferences_editor", "Set %s" % (setting_file + '/' + setting_name))
@@ -823,7 +821,7 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
             try:
                 value = validate(value)
                 settings.set(setting_name, value)
-                log( 8, "widget__input, change: set %s to %s" % (setting_name, value) )
+                # log( 8, "widget__input, change: set %s to %s" % (setting_name, value) )
 
             except ValueError as e:
                 settings.set( setting_name, default )
@@ -838,30 +836,30 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
         show_input(self.view, setting_name, value, done, change, cancel)
 
     def run_widget(self, option):
-        log( 8, "run__widget, option: " + str( option ) )
+        # log( 8, "run__widget, option: " + str( option ) )
 
         setting_file = option[0]
         setting_name = option[1]
 
-        log( 8, "run__widget, setting_file: " + str( setting_file ) )
-        log( 8, "run__widget, setting_name: " + str( setting_name ) )
+        # log( 8, "run__widget, setting_file: " + str( setting_file ) )
+        # log( 8, "run__widget, setting_name: " + str( setting_name ) )
 
         defaultValueAndDescription = self.getDefaultValueAndDescription(setting_file, setting_name)
-        log( 8, "run__widget, defaultValueAndDescription: " + str( defaultValueAndDescription ) )
+        # log( 8, "run__widget, defaultValueAndDescription: " + str( defaultValueAndDescription ) )
 
         settingMetadata = self.getSettingMetadata(setting_file, setting_name, defaultValueAndDescription)
-        log( 8, "run__widget, settingMetadata: " + str( settingMetadata ) )
+        # log( 8, "run__widget, settingMetadata: " + str( settingMetadata ) )
 
         widget   = settingMetadata.get('widget', 'input')
         validate = settingMetadata.get('validate', 'str')
         args     = settingMetadata.get('args', {})
 
-        log( 8, "run__widget, widget:   " + str( widget ) )
-        log( 8, "run__widget, validate: " + str( validate ) )
-        log( 8, "run__widget, args:     " + str( args ) )
+        # log( 8, "run__widget, widget:   " + str( widget ) )
+        # log( 8, "run__widget, validate: " + str( validate ) )
+        # log( 8, "run__widget, args:     " + str( args ) )
 
         userValueAndDescription = self.getUserValueAndDescription(setting_file, setting_name)
-        log( 8, "run__widget, userValueAndDescription: " + str( userValueAndDescription ) )
+        # log( 8, "run__widget, userValueAndDescription: " + str( userValueAndDescription ) )
 
         if isinstance(validate, list):
             validate_in_list = validate
@@ -888,11 +886,11 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
         setting_file = options_path[index][0]
         setting_name = options_path[index][1]
 
-        log( 8, "change__value, setting_file: " + str( setting_file ) )
-        log( 8, "change__value, setting_name: " + str( setting_name ) )
+        # log( 8, "change__value, setting_file: " + str( setting_file ) )
+        # log( 8, "change__value, setting_name: " + str( setting_name ) )
 
         defaultValueAndDescription = self.getDefaultValueAndDescription(setting_file, setting_name)
-        log( 8, "change__value, defaultValueAndDescription: " + str( defaultValueAndDescription ) )
+        # log( 8, "change__value, defaultValueAndDescription: " + str( defaultValueAndDescription ) )
 
         self.run_widget(options_path[index])
 
@@ -940,7 +938,7 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
             self.is_main_panel = True
 
             for setting_file in sorted(self.setting_files.keys()):
-                log( 2, 'run, setting_file: ' + str( setting_file ) )
+                # log( 2, 'run, setting_file: ' + str( setting_file ) )
 
                 if setting_file in self.syntax_names:
                     options_names.append( [ setting_file, "Syntax Settings" ] )
@@ -969,29 +967,29 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
 
         else:
             self.is_main_panel = False
-            log( 2, 'run, setting_file: ' + str( setting_file ) )
+            # log( 2, 'run, setting_file: ' + str( setting_file ) )
 
             options_names.append( [ "BACK (Open the Main Menu)", "Choose another Setting to Edit" ] )
             options_paths.append( ["Filler", "To keep the same index as options_names"] )
             options_desciptions.append( { "description": "Select this option to take another setting to edit.\n" } )
 
             for setting_name in sorted(self.get_setting_names(setting_file)):
-                log( 2, 'run, setting_name: ' + str( setting_name ) )
+                # log( 2, 'run, setting_name: ' + str( setting_name ) )
 
                 option_path = [setting_file, setting_name]
-                log( 2, 'run, option_path: ' + str( option_path ) )
+                # log( 2, 'run, option_path: ' + str( option_path ) )
 
                 options_paths.append( option_path )
                 userValueAndDescription = self.getUserValueAndDescription(setting_file, setting_name)
 
-                log( 4, 'run, userValueAndDescription: ', json.dumps( userValueAndDescription, indent=4 ) )
+                # log( 4, 'run, userValueAndDescription: ', json.dumps( userValueAndDescription, indent=4 ) )
                 option_name = setting_file + '/' + setting_name
 
-                log( 2, 'run, option_name: ' + str( option_name ) )
+                # log( 2, 'run, option_name: ' + str( option_name ) )
                 options_names.append( [ option_name, sublime.encode_value( userValueAndDescription.get('value'), False ) ] )
 
                 defaultValueAndDescription = self.getDefaultValueAndDescription(setting_file, setting_name)
-                log( 4, "run, defaultValueAndDescription: ", json.dumps( defaultValueAndDescription, indent=4 ) )
+                # log( 4, "run, defaultValueAndDescription: ", json.dumps( defaultValueAndDescription, indent=4 ) )
 
                 options_desciptions.append( defaultValueAndDescription )
 
@@ -1009,11 +1007,11 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
         self.window.run_command("show_panel", {"panel": "output.preferences_editor_help"})
 
         def on_highlighted(index):
-            log( 8, "run, on_highlighted, index: " + str( index ) )
+            # log( 8, "run, on_highlighted, index: " + str( index ) )
             help_view.run_command("select_all")
 
             if index < len( options_desciptions ):
-                log( 8, "run, on_highlighted, index: " + str( options_desciptions[index] ) )
+                # log( 8, "run, on_highlighted, index: " + str( options_desciptions[index] ) )
                 help_view.run_command("insert", {"characters": options_desciptions[index]['description']})
 
             else:
@@ -1022,8 +1020,8 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
             help_view.show(0)
 
         def done(index):
-            log( 8, "run, done, index:              " + str( index ) )
-            log( 8, "run, done, self.is_main_panel: " + str( self.is_main_panel ) )
+            # log( 8, "run, done, index:              " + str( index ) )
+            # log( 8, "run, done, self.is_main_panel: " + str( self.is_main_panel ) )
 
             if index < 0:
                 return self.shutdown()
@@ -1045,7 +1043,7 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
                 self.change_value(options_paths, index)
 
         position = None
-        log( 4, "run, options_names: " + json.dumps( options_names, indent=4 ) )
+        # log( 4, "run, options_names: " + json.dumps( options_names, indent=4 ) )
 
         if self.is_main_panel:
             position = lambda: last_access[main_function_key]
