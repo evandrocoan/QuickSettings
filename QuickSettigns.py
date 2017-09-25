@@ -39,10 +39,10 @@ import json
 # 8   - Quick panel selection.
 #
 # 127 - All debugging levels at the same time.
-# log = debug_tools.Debugger( 1, "Debug" )
+# log = debug_tools.Debugger( 127, "Debug" )
 
-# log.log_to_file( "DebugLog.txt" )
-# log.clear_log_file()
+#log.log_to_file( "DebugLog.txt" )
+#log.clear_log_file()
 
 # log( 2, "Debugging" )
 # log( 2, "..." )
@@ -934,7 +934,7 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
         options_desciptions.append( { "description": "You can press Esc, or select this option to end editing settings.\n" } )
 
         if setting_file is None:
-            # log( 2, "run, self.setting_files.keys(): " + json.dumps( self.setting_files.keys(), indent=4 ) )
+            # log( 2, "run, self.setting_files.keys(): " + str( self.setting_files.keys() ) )
             self.is_main_panel = True
 
             for setting_file in sorted(self.setting_files.keys()):
@@ -1035,7 +1035,7 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
 
             elif self.is_main_panel:
                 last_access[main_function_key] = index
-                self.window.run_command("edit_preferences", {"setting_file": options_names[index][0]})
+                self.window.run_command("quick_settings_edit_preferences", {"setting_file": options_names[index][0]})
 
             else:
                 last_access[options_paths[index][0]] = index
