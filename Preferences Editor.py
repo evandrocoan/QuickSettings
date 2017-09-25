@@ -46,9 +46,13 @@ log( 1, "Debugging" )
 log( 1, "..." )
 log( 1, "..." )
 
+this_view_file = 'Current/This View'
+current_syntax_file = 'Current/This View'
+current_project_file = 'Current Project'
+distraction_free_file = 'Distraction Free'
 default_preferences_file = 'Preferences'
 
-standard_settings_names = ( "Distraction Free", "Current Syntax", "Current Project", "Current/This View" )
+standard_settings_names = ( distraction_free_file, current_syntax_file, current_project_file, this_view_file )
 standard_settings_types = ('default', 'default_'+sublime.platform(), 'user')
 
 
@@ -214,12 +218,12 @@ def save_preference(view, setting_file, setting_name, value):
     log( 2, "save__preference, setting_name: " + str( setting_name ) )
     log( 2, "save__preference, value:        " +  str( value ) )
 
-    if setting_file == "Current/This View":
+    if setting_file == this_view_file:
         settings = view.settings()
         settings.set(setting_name, value)
         return
 
-    if setting_file == "Current Project":
+    if setting_file == current_project_file:
         data = view.window().project_data()
 
         if 'settings' not in data:
@@ -353,7 +357,7 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
     #
 
     def set_setting_value(self, setting_file, setting_name, value):
-        if setting_file == "Current Syntax":
+        if setting_file == current_syntax_file:
             setting_file = self.current_syntax
 
         save_preference(self.view, setting_file, setting_name, value)
@@ -872,10 +876,10 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
 
         # https://bitbucket.org/klorenz/sublimepreferenceseditor/pull-requests/4
         if self.current_syntax in self.setting_files:
-            self.setting_files['Current Syntax'] = self.setting_files[self.current_syntax]
+            self.setting_files[current_syntax_file] = self.setting_files[self.current_syntax]
 
-        self.setting_files['Current/This View'] = { 'default': {}, 'default_'+sublime.platform(): {} }
-        self.setting_files['Current Project'] = { 'default': {}, 'default_'+sublime.platform(): {} }
+        self.setting_files[this_view_file] = { 'default': {}, 'default_'+sublime.platform(): {} }
+        self.setting_files[current_project_file] = { 'default': {}, 'default_'+sublime.platform(): {} }
 
         options_names = []
         options_paths = []
@@ -902,10 +906,10 @@ class EditPreferencesCommand(sublime_plugin.WindowCommand):
             options_to_move = \
             [
                 [ default_preferences_file, "General Settings" ],
-                [ "Distraction Free", "Preferences for Distraction Free Mode" ],
-                [ "Current Syntax", "%s Syntax Specific Preferences" % self.current_syntax ],
-                [ "Current Project", "Current Project Specific Preferences" ],
-                [ "Current/This View", "Preferences for this View only" ]
+                [ distraction_free_file, "Preferences for Distraction Free Mode" ],
+                [ current_syntax_file, "%s Syntax Specific Preferences" % self.current_syntax ],
+                [ current_project_file, "Current Project Specific Preferences" ],
+                [ this_view_file, "Preferences for this View only" ]
             ]
 
             for _option in options_to_move:
