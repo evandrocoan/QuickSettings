@@ -83,4 +83,7 @@
 			{"caption": "Disable Package", "command": "disable_package"}
 		]}
 	},
+
+	// Whether to show or not the helper view with the settings documentation
+	"always_show_helper_view": false,
 }

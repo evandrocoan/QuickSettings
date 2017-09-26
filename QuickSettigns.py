@@ -355,6 +355,44 @@ def load_syntax_names():
     return syntax_names
 
 
+class HelperView():
+
+    def __init__(self, window, help_view_name, is_enabled=True):
+        self.window     = window
+        self.is_enabled = is_enabled
+
+        self.help_view      = self.window.create_output_panel(help_view_name)
+        self.help_view_name = help_view_name
+
+        self.help_view.settings().set('auto_indent', False)
+
+    def disable_panel():
+        self.is_enabled = False
+
+    def enable_panel():
+        self.is_enabled = True
+
+    def run_command(self, command, args={}):
+
+        if self.is_enabled:
+            self.help_view.run_command(command, args)
+
+    def show_panel(self):
+
+        if self.is_enabled:
+            self.window.run_command("show_panel", {"panel": "output."+self.help_view_name})
+
+    def hide_panel(self):
+
+        if self.is_enabled:
+            self.window.run_command("hide_panel", {"panel": "output."+self.help_view_name})
+
+    def focus_begining(self):
+
+        if self.is_enabled:
+            self.help_view.show(0)
+
+
 # commands are
 #
 # Edit Preferences        --> User
@@ -914,7 +952,7 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
         self.run_widget(options_path[index])
 
     def shutdown(self):
-        self.window.run_command("hide_panel", {"panel": "output.preferences_editor_help"})
+        self.help_view.hide_panel()
 
     def run(self, setting_file=None, syntax_name=None):
         r"""
@@ -1012,27 +1050,26 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
 
                 options_desciptions.append( defaultValueAndDescription )
 
-        help_view = self.window.create_output_panel("preferences_editor_help")
-        help_view.settings().set('auto_indent', False)
+        self.help_view = HelperView(self.window, "preferences_editor_help", self.view.settings().get('always_show_helper_view', False))
 
         # Always create the main dictionary entry as it is only one key
         if main_function_key not in last_access:
             last_access[main_function_key] = 0
 
-        self.window.run_command("show_panel", {"panel": "output.preferences_editor_help"})
+        self.help_view.show_panel()
 
         def on_highlighted(index):
             # log( 8, "run, on_highlighted, index: " + str( index ) )
-            help_view.run_command("select_all")
+            self.help_view.run_command("select_all")
 
             if index < len( options_desciptions ):
                 # log( 8, "run, on_highlighted, index: " + str( options_desciptions[index] ) )
-                help_view.run_command("insert", {"characters": options_desciptions[index]['description']})
+                self.help_view.run_command("insert", {"characters": options_desciptions[index]['description']})
 
             else:
-                help_view.run_command("insert", {"characters": "Package Settings"})
+                self.help_view.run_command("insert", {"characters": "Package Settings"})
 
-            help_view.show(0)
+            self.help_view.focus_begining()
 
         def done(index):
             # log( 8, "run, done, index:              " + str( index ) )
