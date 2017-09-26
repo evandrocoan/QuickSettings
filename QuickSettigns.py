@@ -108,7 +108,7 @@ def show_input(view, caption, initial, on_done=None, on_change=None, on_cancel=N
         _initial = initial
 
         if not isinstance(_initial, str):
-            _initial = sublime.encode_value(_initial)
+            _initial = json.dumps(_initial)
 
         input_view = window.show_input_panel(caption, _initial, on_done=on_done, on_change=on_change, on_cancel=on_cancel)
 
@@ -370,13 +370,15 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
     #
 
     def set_setting_value(self, setting_file, setting_name, value):
-        # log( 2, "set__setting_value, setting_file: " +  str( setting_file ) )
-        # log( 2, "set__setting_value, setting_name: " +  str( setting_name ) )
+        # log( 2, "set__setting_value, setting_file:      " + str( setting_file ) )
+        # log( 2, "set__setting_value, setting_name:      " + str( setting_name ) )
+        # log( 2, "set__setting_value, json.dumps(value): " + json.dumps(value) )
+
         if setting_file == current_syntax_file:
             setting_file = self.current_syntax
 
         save_preference(self.view, setting_file, setting_name, value)
-        self.options_names[self.index][1] = sublime.encode_value(value, False)
+        self.options_names[self.index][1] = json.dumps(value)
 
     def make_pref_rec(self, setting_file, setting_type, setting_name, value):
         return "%s/%s/%s" % (setting_file, setting_type, setting_name), value
@@ -724,9 +726,9 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
 
             options = \
             [
-                ["Save Changes", sublime.encode_value(value, False)],
-                ["Add Option", "From: "+sublime.encode_value(other, False)],
-                ["Remove Option", "From:"+sublime.encode_value(value, False)]
+                ["Save Changes", json.dumps(value)],
+                ["Add Option", "From: "+json.dumps(other)],
+                ["Remove Option", "From:"+json.dumps(value)]
             ]
 
             def done(index):
@@ -1000,7 +1002,7 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
                 option_name = setting_file + '/' + setting_name
 
                 # log( 2, 'run, option_name: ' + str( option_name ) )
-                options_names.append( [ option_name, sublime.encode_value( userValueAndDescription.get('value'), False ) ] )
+                options_names.append( [ option_name, json.dumps( userValueAndDescription.get('value') ) ] )
 
                 defaultValueAndDescription = self.getDefaultValueAndDescription(setting_file, setting_name)
                 # log( 4, "run, defaultValueAndDescription: ", json.dumps( defaultValueAndDescription, indent=4 ) )
