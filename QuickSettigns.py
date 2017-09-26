@@ -54,8 +54,11 @@ current_project_file = 'Current Project'
 distraction_free_file = 'Distraction Free'
 default_preferences_file = 'Preferences'
 
-standard_settings_names = ( distraction_free_file, current_syntax_file, current_project_file, this_view_file )
+# This must be the snake case name of the main class
+command_name = "quick_settings_edit_preferences"
+
 standard_settings_types = ('default', 'default_'+sublime.platform(), 'user')
+standard_settings_names = ( distraction_free_file, current_syntax_file, current_project_file, this_view_file )
 
 last_access = {}
 main_function_key = 'main_function'
@@ -1043,11 +1046,11 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
 
             elif index == 1 and not self.is_main_panel:
                 self.shutdown()
-                self.window.run_command("edit_preferences")
+                self.window.run_command(command_name)
 
             elif self.is_main_panel:
                 last_access[main_function_key] = index
-                self.window.run_command("quick_settings_edit_preferences", {"setting_file": options_names[index][0]})
+                self.window.run_command(command_name, {"setting_file": options_names[index][0]})
 
             else:
                 last_access[options_paths[index][0]] = index
