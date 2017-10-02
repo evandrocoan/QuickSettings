@@ -19,7 +19,7 @@ def assert_path(module):
         sys.path.append( module )
 
 # Import the debug tools
-assert_path( os.path.join( os.path.dirname( os.path.dirname( os.path.realpath( __file__ ) ) ), 'PythonDebugTools' ) )
+assert_path( os.path.join( os.path.dirname( os.path.dirname( os.path.realpath( __file__ ) ) ), 'PythonDebugTools/all' ) )
 
 # Import the debugger
 import debug_tools
