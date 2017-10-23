@@ -18,17 +18,12 @@ def assert_path(module):
     if module not in sys.path:
         sys.path.append( module )
 
-# Import the debug tools
-assert_path( os.path.join( os.path.dirname( os.path.dirname( os.path.realpath( __file__ ) ) ), 'PythonDebugTools/all' ) )
-
-# Import the debugger
-import debug_tools
-import imp
-imp.reload( debug_tools )
-import debug_tools
 
 import ast
 import json
+
+# Import the debugger
+from PythonDebugTools.debug_tools import Debugger
 
 # Enable debug messages: (bitwise)
 #
@@ -39,7 +34,7 @@ import json
 # 8   - Quick panel selection.
 #
 # 127 - All debugging levels at the same time.
-# log = debug_tools.Debugger( 127, "Debug" )
+# log = Debugger( 127, "Debug" )
 
 #log.log_to_file( "DebugLog.txt" )
 #log.clear_log_file()
