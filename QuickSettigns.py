@@ -36,8 +36,8 @@ from PythonDebugTools.debug_tools import Debugger
 # 127 - All debugging levels at the same time.
 # log = Debugger( 127, "Debug" )
 
-#log.log_to_file( "DebugLog.txt" )
-#log.clear_log_file()
+# log.log_to_file( "DebugLog.txt" )
+# log.clear_log_file()
 
 # log( 2, "Debugging" )
 # log( 2, "..." )
@@ -282,6 +282,12 @@ def load_preferences():
             platform = "linux"
 
         # log( 2, "load__preferences, preference_name: {0}".format( preference_name ) )
+
+        if preference_name == "Base File":
+            preference_name = default_preferences_file
+
+        if preference_name == "Global":
+            preference_name = default_preferences_file
 
         if "/User/" in preference_file:
             setting_type = "user"
