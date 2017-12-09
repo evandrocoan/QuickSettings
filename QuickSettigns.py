@@ -23,7 +23,7 @@ import ast
 import json
 
 # Import the debugger
-from PythonDebugTools.debug_tools import Debugger
+from python_debug_tools import Debugger
 
 # Enable debug messages: (bitwise)
 #
