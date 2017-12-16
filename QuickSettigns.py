@@ -10,14 +10,6 @@ import pprint
 import sublime
 import sublime_plugin
 
-def assert_path(module):
-    """
-        Import a module from a relative path
-        https://stackoverflow.com/questions/279237/import-a-module-from-a-relative-path
-    """
-    if module not in sys.path:
-        sys.path.append( module )
-
 
 import ast
 import json
