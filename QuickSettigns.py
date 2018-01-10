@@ -14,22 +14,22 @@ import sublime_plugin
 import ast
 import json
 
-# Import the debugger
-from python_debug_tools import Debugger
+# # Import the debugger
+# from python_debug_tools.debug_tools import Debugger
 
-# Enable debug messages: (bitwise)
-#
-# 0   - Disabled debugging
-# 1   - Error logging messages
-# 2   - Settings loading notices
-# 4   - Settings loading file contents
-# 8   - Quick panel selection.
-#
-# 127 - All debugging levels at the same time.
+# # Enable debug messages: (bitwise)
+# #
+# # 0   - Disabled debugging
+# # 1   - Error logging messages
+# # 2   - Settings loading notices
+# # 4   - Settings loading file contents
+# # 8   - Quick panel selection.
+# #
+# # 127 - All debugging levels at the same time.
 # log = Debugger( 127, "Debug" )
 
-# log.log_to_file( "DebugLog.txt" )
-# log.clear_log_file()
+# # log.log_to_file( "DebugLog.txt" )
+# # log.clear_log_file()
 
 # log( 2, "Debugging" )
 # log( 2, "..." )
