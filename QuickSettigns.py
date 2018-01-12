@@ -15,7 +15,7 @@ import ast
 import json
 
 # # Import the debugger
-# from python_debug_tools.debug_tools import Debugger
+# from python_debug_tools.debug_tools import getLogger
 
 # # Enable debug messages: (bitwise)
 # #
@@ -26,10 +26,10 @@ import json
 # # 8   - Quick panel selection.
 # #
 # # 127 - All debugging levels at the same time.
-# log = Debugger( 127, "Debug" )
+# log = getLogger( 127, os.path.basename( __file__ ) )
 
-# # log.log_to_file( "DebugLog.txt" )
-# # log.clear_log_file()
+# #log.set_file_logger( "DebugLog.txt" )
+# #log.clear_log_file()
 
 # log( 2, "Debugging" )
 # log( 2, "..." )
