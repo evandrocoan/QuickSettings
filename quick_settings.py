@@ -15,7 +15,7 @@ import ast
 import json
 
 # # Import the debugger
-# from python_debug_tools import getLogger
+# from debug_tools import getLogger
 
 # # Enable debug messages: (bitwise)
 # #
