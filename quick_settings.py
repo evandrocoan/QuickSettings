@@ -28,8 +28,8 @@ import json
 # # 127 - All debugging levels at the same time.
 # log = getLogger( 127, os.path.basename( __file__ ) )
 
-# #log.setup_logger( "DebugLog.txt" )
-# #log.clear_log_file()
+# #log.setup( "DebugLog.txt" )
+# #log.clear()
 
 # log( 2, "Debugging" )
 # log( 2, "..." )
