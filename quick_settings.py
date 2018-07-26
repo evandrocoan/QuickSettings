@@ -26,7 +26,7 @@ import json
 # # 8   - Quick panel selection.
 # #
 # # 127 - All debugging levels at the same time.
-# log = getLogger( 127, os.path.basename( __file__ ) )
+# log = getLogger( 127, __name__ )
 
 # #log.setup( "DebugLog.txt" )
 # #log.clear()
