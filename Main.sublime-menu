@@ -28,6 +28,8 @@
                     }
                 ]
             },
+            { "caption": "-", "id": "quick-settings" },
+            { "caption": "Quick Settings...", "command": "quick_settings_edit_preferences" },
         ]
     }
 ]
