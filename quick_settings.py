@@ -10,27 +10,30 @@ import pprint
 import sublime
 import sublime_plugin
 
-
 import ast
 import json
 
+from collections import OrderedDict
+
 # # Import the debugger
-# from debug_tools import getLogger
+from debug_tools import getLogger
+from debug_tools.third_part import load_data_file
+from debug_tools.third_part import write_data_file
+from debug_tools.utilities import pop_dict_last_item
 
-# # Enable debug messages: (bitwise)
-# #
-# # 0   - Disabled debugging
-# # 1   - Error logging messages
-# # 2   - Settings loading notices
-# # 4   - Settings loading file contents
-# # 8   - Quick panel selection.
-# #
-# # 127 - All debugging levels at the same time.
-# log = getLogger( 127, __name__ )
+# Enable debug messages: (bitwise)
+#
+# 0   - Disabled debugging
+# 1   - Error logging messages
+# 2   - Settings loading notices
+# 4   - Settings loading file contents
+# 8   - Quick panel selection.
+#
+# 127 - All debugging levels at the same time.
+log = getLogger( 127, __name__ )
 
-# #log.setup( "DebugLog.txt" )
-# #log.clear()
-
+#log.setup( "DebugLog.txt" )
+#log.clear()
 # log( 2, "Debugging" )
 # log( 2, "..." )
 # log( 2, "..." )
@@ -47,8 +50,77 @@ command_name = "quick_settings_edit_preferences"
 standard_settings_types = ('default', 'default_'+sublime.platform(), 'user')
 standard_settings_names = ( distraction_free_file, current_syntax_file, current_project_file, this_view_file )
 
-last_access = {}
+
+CURRENT_PACKAGE_FILE   = os.path.dirname( os.path.realpath( __file__ ) )
+PACKAGE_ROOT_DIRECTORY = CURRENT_PACKAGE_FILE.replace( ".sublime-package", "" )
+CURRENT_PACKAGE_NAME   = os.path.basename( PACKAGE_ROOT_DIRECTORY )
+
+g_settings = {}
 main_function_key = 'main_function'
+last_quick_settings_input = 'last_quick_settings_input'
+
+MAXIMUM_WORSPACES_ENTRIES = 100
+
+def plugin_loaded():
+    load_settings()
+
+def load_settings():
+    global g_settings
+    global g_package_settings_path
+
+    g_package_settings_path = os.path.join( sublime.packages_path(), "User", CURRENT_PACKAGE_NAME + ".inputs" )
+
+    try:
+        # Returns an OrderedDict
+        g_settings = load_data_file( g_package_settings_path, exceptions=True )
+
+    except Exception as error:
+        log.exception( "Could not load the settings file" )
+        write_data_file( g_package_settings_path, g_settings, debug=0 )
+
+def save_index(key, index):
+    g_settings[key] = index
+    window = sublime.active_window()
+    project_file_name = window.project_file_name()
+
+    window_settings = window.settings()
+    window_settings.set(last_quick_settings_input, g_settings)
+
+    if project_file_name:
+        workspaces = g_settings.setdefault( 'workspaces_' + last_quick_settings_input, OrderedDict() )
+
+        # https://docs.python.org/3/library/collections.html#collections.OrderedDict.move_to_end
+        # https://stackoverflow.com/questions/16664874/how-can-i-add-an-element-at-the-top-of-an-ordereddict-in-python
+        workspacesetting = workspaces.setdefault(project_file_name, {key: index})
+
+        workspacesetting[key] = index
+        workspaces.move_to_end( project_file_name, last=False )
+
+        while len( workspaces ) > MAXIMUM_WORSPACES_ENTRIES:
+            pop_dict_last_item( workspaces )
+
+    write_data_file( g_package_settings_path, g_settings, debug=0 )
+
+def get_index(key):
+    indexdict = _get_index(key)
+    index = indexdict.get( key, 0 )
+    return index
+
+def has_index(key):
+    return key in _get_index(key)
+
+def _get_index(key):
+    window = sublime.active_window()
+    window_settings = window.settings()
+
+    project_file_name = window.project_file_name()
+    workspaces = g_settings.get( 'workspaces_' + last_quick_settings_input, {} )
+
+    indexdict = window_settings.get(
+            last_quick_settings_input,
+            workspaces.get(project_file_name, g_settings )
+        )
+    return indexdict
 
 
 def show_quick_panel(view, options, done, highlighted=None, last=-1):
@@ -323,7 +395,7 @@ def load_preferences():
                     preference_settings[setting_name]['value'] = setting_value
 
             except:
-                print( "load_preferences: Error reading %s (preference_data is %s)" % (preference_file, preference_data) )
+                log( 1, "load_preferences: Error reading %s (preference_data is %s)", preference_file, preference_data )
 
             preference.update(preference_settings)
 
@@ -1046,8 +1118,8 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
         self.help_view = HelperView(self.window, "preferences_editor_help", self.view.settings().get('always_show_helper_view', False))
 
         # Always create the main dictionary entry as it is only one key
-        if main_function_key not in last_access:
-            last_access[main_function_key] = 0
+        if not has_index(main_function_key):
+            save_index(main_function_key, 0)
 
         self.help_view.show_panel()
 
@@ -1079,11 +1151,11 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
                 self.window.run_command(command_name)
 
             elif self.is_main_panel:
-                last_access[main_function_key] = index
+                save_index(main_function_key, index)
                 self.window.run_command(command_name, {"setting_file": options_names[index][0]})
 
             else:
-                last_access[options_paths[index][0]] = index
+                save_index(options_paths[index][0], index)
 
                 self.index = index
                 self.change_value(options_paths, index)
@@ -1092,17 +1164,16 @@ class QuickSettingsEditPreferencesCommand(sublime_plugin.WindowCommand):
         # log( 4, "run, options_names: " + json.dumps( options_names, indent=4 ) )
 
         if self.is_main_panel:
-            position = lambda: last_access[main_function_key]
+            position = lambda: get_index(main_function_key)
 
         else:
             # Only create a dictionary entry for the remaining keys when it is required
-            if self.setting_file not in last_access:
-                last_access[self.setting_file] = 0
+            if not has_index(self.setting_file):
+                save_index(self.setting_file, 0)
 
-            position = lambda: last_access[self.setting_file]
+            position = lambda: get_index(self.setting_file)
 
         self.options_names = options_names
         self.preferences_selector = lambda: show_quick_panel(self.view, self.options_names, done, on_highlighted, position)
         self.preferences_selector()
-
 
